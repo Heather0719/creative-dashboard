@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>광고 소재 효율 대시보드</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="data.js" onerror="console.log('data.js 없음 — 수동 업로드 모드')"></script>
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --card: #ffffff;
+    --border: #e2e6ea;
+    --primary: #4f46e5;
+    --primary-light: #eef2ff;
+    --text: #1a1d23;
+    --text-muted: #6b7280;
+    --gold: #f59e0b;
+    --silver: #94a3b8;
+    --bronze: #cd7f32;
+    --green: #10b981;
+    --ua-color: #6366f1;
+    --ua-light: #eef2ff;
+    --re-color: #f59e0b;
+    --re-light: #fffbeb;
+    --carousel-color: #3b82f6;
+    --video-color: #8b5cf6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, 'Malgun Gothic', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+
+  /* Header */
+  .header { background: var(--card); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+  .logo { font-size: 17px; font-weight: 700; color: var(--primary); }
+  .logo span { color: var(--text-muted); font-weight: 400; font-size: 13px; }
+  .last-updated { font-size: 12px; color: var(--text-muted); }
+
+  /* Upload — compact bar */
+  .upload-bar { background: var(--card); border-bottom: 1px solid var(--border); padding: 6px 24px; display: flex; align-items: center; gap: 10px; }
+  .upload-bar-label { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+  .upload-bar-filename { font-size: 12px; color: var(--primary); font-weight: 500; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .upload-btn { background: var(--primary); color: white; border: none; border-radius: 6px; padding: 5px 14px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .upload-btn:hover { background: #4338ca; }
+  #fileInput { display: none; }
+
+  /* 작품소진 순위 */
+  .title-rank-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .title-rank-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .title-rank-head { padding: 12px 16px; font-size: 13px; font-weight: 700; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+  .title-rank-head .badge { font-size: 11px; font-weight: 500; border-radius: 12px; padding: 2px 8px; }
+  .title-rank-table { width: 100%; border-collapse: collapse; }
+  .title-rank-table th { font-size: 11px; font-weight: 600; color: var(--text-muted); padding: 7px 12px; text-align: left; background: var(--bg); border-bottom: 1px solid var(--border); }
+  .title-rank-table td { font-size: 12px; padding: 8px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+  .title-rank-table tr:last-child td { border-bottom: none; }
+  .title-rank-table tr:hover td { background: var(--bg); }
+  .title-num { font-weight: 700; color: var(--text-muted); width: 24px; }
+  .title-name { font-weight: 500; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .title-val { font-weight: 700; text-align: right; white-space: nowrap; }
+  .val-ua { color: var(--ua-color); }
+  .val-re { color: var(--re-color); }
+  .val-spend { color: #047857; }
+  @media (max-width: 900px) { .title-rank-grid { grid-template-columns: 1fr; } }
+
+  /* Filter bar */
+  .filter-bar { background: var(--card); border-bottom: 1px solid var(--border); padding: 10px 24px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .filter-group { display: flex; align-items: center; gap: 6px; }
+  .filter-label { font-size: 12px; color: var(--text-muted); font-weight: 500; white-space: nowrap; }
+  /* Channel multi-select */
+  .ch-multi { position: relative; }
+  .ch-toggle { border: 1px solid var(--border); background: white; border-radius: 6px; padding: 5px 28px 5px 9px; font-size: 13px; color: var(--text); cursor: pointer; min-width: 100px; text-align: left; position: relative; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+  .ch-toggle::after { content: "▾"; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 10px; color: var(--text-muted); }
+  .ch-dropdown { position: absolute; top: calc(100% + 4px); left: 0; background: white; border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.10); z-index: 200; min-width: 160px; max-height: 240px; overflow-y: auto; display: none; padding: 4px 0; }
+  .ch-dropdown.open { display: block; }
+  .ch-item { display: flex; align-items: center; gap: 8px; padding: 7px 12px; font-size: 12px; cursor: pointer; }
+  .ch-item:hover { background: var(--bg); }
+  .ch-item input[type="checkbox"] { accent-color: var(--primary); width: 14px; height: 14px; cursor: pointer; flex-shrink: 0; }
+  .ch-item-all { border-bottom: 1px solid var(--border); font-weight: 600; }
+  .filter-bar select, .filter-bar input[type="date"] {
+    border: 1px solid var(--border); border-radius: 6px; padding: 5px 9px; font-size: 13px; color: var(--text);
+    background: white; cursor: pointer; outline: none;
+  }
+  .filter-bar select:focus, .filter-bar input:focus { border-color: var(--primary); }
+  .filter-divider { width: 1px; height: 22px; background: var(--border); }
+  .filter-quick { display: flex; gap: 4px; }
+  .quick-btn { border: 1px solid var(--border); background: white; border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer; color: var(--text-muted); transition: all 0.15s; }
+  .quick-btn:hover, .quick-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+  .reset-btn { border: none; background: none; color: var(--text-muted); font-size: 12px; cursor: pointer; padding: 4px 8px; border-radius: 4px; }
+  .reset-btn:hover { background: var(--bg); }
+  .apply-btn { background: var(--primary); color: white; border: none; border-radius: 8px; padding: 7px 18px; font-size: 13px; font-weight: 600; cursor: pointer; margin-left: auto; white-space: nowrap; }
+  .apply-btn:hover { background: #4338ca; }
+  .thumb-drive-link { display: block; text-decoration: none; }
+  .thumb-drive-link .thumb-mini { transition: transform 0.15s, opacity 0.15s; cursor: pointer; }
+  .thumb-drive-link:hover .thumb-mini { transform: scale(1.08); opacity: 0.85; }
+
+  /* Tabs */
+  .tab-bar { background: var(--card); border-bottom: 2px solid var(--border); padding: 0 24px; display: flex; gap: 0; }
+  .tab-btn { padding: 14px 28px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; background: none; color: var(--text-muted); border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all 0.15s; display: flex; align-items: center; gap: 8px; }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active-ua { color: var(--ua-color); border-bottom-color: var(--ua-color); }
+  .tab-btn.active-re { color: var(--re-color); border-bottom-color: var(--re-color); }
+  .tab-count { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 20px; }
+  .tab-count-ua { background: var(--ua-light); color: var(--ua-color); }
+  .tab-count-re { background: var(--re-light); color: var(--re-color); }
+
+  /* Main */
+  .main { padding: 20px 24px; }
+
+  /* Stats */
+  .stats-row { display: grid; gap: 12px; margin-bottom: 20px; }
+  .stats-ua { grid-template-columns: repeat(4, 1fr); }
+  .stats-re { grid-template-columns: repeat(4, 1fr); }
+  .stat-card { background: var(--card); border-radius: 10px; padding: 16px; border: 1px solid var(--border); }
+  .stat-card .stat-label { font-size: 11px; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-card .stat-value { font-size: 22px; font-weight: 700; margin-top: 4px; }
+  .stat-card .stat-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .stat-card.ua .stat-value { color: var(--ua-color); }
+  .stat-card.re .stat-value { color: var(--re-color); }
+  .stat-card.green .stat-value { color: var(--green); }
+  .stat-card.gray .stat-value { color: var(--text-muted); }
+
+  /* Creative Card Grid */
+  .section-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .section-title { font-size: 15px; font-weight: 700; }
+  .sort-label { font-size: 12px; color: var(--text-muted); margin-left: 6px; }
+  .sort-btn { border: 1px solid var(--border); background: white; border-radius: 6px; padding: 5px 12px; font-size: 12px; cursor: pointer; color: var(--text-muted); transition: all 0.15s; }
+  .sort-btn:hover { background: var(--bg); }
+  .sort-btn.active-ua { background: var(--ua-color); color: white; border-color: var(--ua-color); }
+  .sort-btn.active-re { background: var(--re-color); color: white; border-color: var(--re-color); }
+  .result-count { margin-left: auto; font-size: 12px; color: var(--text-muted); }
+  /* ── Top 3 카드 ── */
+  .cr-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .cr-card { background: var(--card); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; transition: transform 0.15s, box-shadow 0.15s; }
+  .cr-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.09); }
+  .cr-card-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  .cr-rank { font-size: 12px; font-weight: 700; color: var(--text-muted); }
+  .cr-rank-1 { color: var(--gold); }
+  .cr-rank-2 { color: var(--silver); }
+  .cr-rank-3 { color: var(--bronze); }
+  .cr-status { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
+  .cr-status-live { background: #dcfce7; color: #15803d; }
+  .cr-status-pause { background: #f3f4f6; color: #6b7280; }
+  .cr-info { padding: 12px 14px 14px; }
+  .cr-name-row { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+  .cr-name { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  .type-tag { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; flex-shrink: 0; }
+  .tag-carousel { background: #dbeafe; color: #1d4ed8; }
+  .tag-video { background: #ede9fe; color: #6d28d9; }
+  .cr-meta { display: flex; flex-direction: column; gap: 4px; }
+  .cr-meta-row { font-size: 12px; color: var(--text-muted); }
+  .cr-metric { font-weight: 700; font-size: 14px; }
+  .cr-metric.ua { color: var(--ua-color); }
+  .cr-metric.re { color: var(--re-color); }
+  .metric-ua { color: var(--ua-color); }
+  .metric-re { color: var(--re-color); }
+
+  /* ── 랭킹 테이블 ── */
+  .rank-table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-top: 6px; }
+  .rank-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .rank-table thead th { background: var(--bg); padding: 9px 14px; text-align: left; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  .rank-table tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+  .rank-table tbody tr:last-child { border-bottom: none; }
+  .rank-table tbody tr:hover { background: var(--bg); }
+  .rank-table td { padding: 9px 14px; vertical-align: middle; }
+  .rt-rank { font-weight: 700; font-size: 13px; color: var(--text-muted); text-align: center; width: 44px; }
+  .rt-rank-1 { color: var(--gold); }
+  .rt-rank-2 { color: var(--silver); }
+  .rt-rank-3 { color: var(--bronze); }
+  .rt-name { font-weight: 500; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rt-perf { font-weight: 700; }
+  .rt-perf.ua { color: var(--ua-color); }
+  .rt-perf.re { color: var(--re-color); }
+  .rank-table-note { font-size: 11px; color: var(--text-muted); padding: 8px 14px; border-top: 1px solid var(--border); background: var(--bg); }
+
+  /* Empty */
+  .empty-state { text-align: center; padding: 60px 24px; }
+  .empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-state h3 { font-size: 16px; font-weight: 600; color: var(--text-muted); }
+  .empty-state p { font-size: 13px; color: #9ca3af; margin-top: 6px; }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 24px; right: 24px; background: #1a1d23; color: white; padding: 12px 18px; border-radius: 8px; font-size: 13px; z-index: 9999; opacity: 0; transform: translateY(10px); transition: all 0.3s; pointer-events: none; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  /* Memo Tab */
+  .memo-layout { display: grid; grid-template-columns: 380px 1fr; gap: 20px; align-items: start; }
+  .memo-form-card { background: var(--card); border-radius: 12px; border: 1px solid var(--border); padding: 20px; position: sticky; top: 80px; }
+  .memo-form-card h3 { font-size: 14px; font-weight: 700; margin-bottom: 16px; color: var(--text); }
+  .form-row { margin-bottom: 14px; }
+  .form-row label { display: block; font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .form-row input[type="text"], .form-row textarea, .form-row select {
+    width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px;
+    font-size: 13px; color: var(--text); background: white; outline: none; font-family: inherit;
+  }
+  .form-row input:focus, .form-row textarea:focus, .form-row select:focus { border-color: var(--primary); }
+  .form-row textarea { resize: vertical; min-height: 90px; line-height: 1.5; }
+  .priority-btns, .status-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+  .prio-btn, .stat-btn { border: 1.5px solid var(--border); background: white; border-radius: 6px; padding: 5px 12px; font-size: 12px; cursor: pointer; color: var(--text-muted); transition: all 0.15s; }
+  .prio-btn.sel-high { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
+  .prio-btn.sel-mid  { background: #fef9c3; color: #ca8a04; border-color: #fde047; }
+  .prio-btn.sel-low  { background: #dcfce7; color: #16a34a; border-color: #86efac; }
+  .stat-btn.sel      { background: var(--primary); color: white; border-color: var(--primary); }
+  .memo-save-btn { width: 100%; background: var(--primary); color: white; border: none; border-radius: 8px; padding: 10px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 4px; }
+  .memo-save-btn:hover { background: #4338ca; }
+
+  .memo-list-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .memo-list-header h3 { font-size: 14px; font-weight: 700; }
+  .memo-filter-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .memo-filter-chip { border: 1px solid var(--border); background: white; border-radius: 20px; padding: 4px 12px; font-size: 12px; cursor: pointer; color: var(--text-muted); }
+  .memo-filter-chip.active { background: var(--primary); color: white; border-color: var(--primary); }
+  .memo-cards { display: flex; flex-direction: column; gap: 12px; }
+  .memo-card { background: var(--card); border-radius: 10px; border: 1px solid var(--border); padding: 14px 16px; transition: box-shadow 0.15s; }
+  .memo-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+  .memo-card-top { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+  .memo-creative-tag { background: var(--primary-light); color: var(--primary); border-radius: 6px; padding: 3px 9px; font-size: 12px; font-weight: 600; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 0; }
+  .memo-prio-badge { border-radius: 20px; padding: 2px 8px; font-size: 11px; font-weight: 600; flex-shrink: 0; }
+  .prio-high { background: #fee2e2; color: #dc2626; }
+  .prio-mid  { background: #fef9c3; color: #ca8a04; }
+  .prio-low  { background: #dcfce7; color: #16a34a; }
+  .memo-stat-badge { border-radius: 20px; padding: 2px 8px; font-size: 11px; font-weight: 600; background: var(--bg); color: var(--text-muted); }
+  .memo-date { font-size: 11px; color: var(--text-muted); margin-left: auto; white-space: nowrap; }
+  .memo-text { font-size: 13px; color: var(--text); line-height: 1.6; margin-bottom: 10px; white-space: pre-wrap; }
+  .memo-actions { display: flex; gap: 6px; justify-content: flex-end; }
+  .memo-action-btn { border: 1px solid var(--border); background: white; border-radius: 6px; padding: 4px 10px; font-size: 11px; cursor: pointer; color: var(--text-muted); transition: all 0.15s; }
+  .memo-action-btn:hover { background: var(--bg); }
+  .memo-action-btn.del:hover { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
+  .memo-empty { text-align: center; padding: 50px 20px; color: var(--text-muted); font-size: 13px; }
+  .memo-empty .memo-empty-icon { font-size: 36px; margin-bottom: 10px; }
+  .datalist-input { position: relative; }
+  #creativeInput { padding-right: 30px; }
+  .autocomplete-list { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid var(--border); border-top: none; border-radius: 0 0 8px 8px; max-height: 180px; overflow-y: auto; z-index: 50; display: none; }
+  .autocomplete-item { padding: 7px 12px; font-size: 12px; cursor: pointer; }
+  .autocomplete-item:hover { background: var(--bg); }
+  @media (max-width: 900px) { .memo-layout { grid-template-columns: 1fr; } .memo-form-card { position: static; } }
+
+  @media (max-width: 900px) {
+    .stats-ua, .stats-re { grid-template-columns: repeat(2, 1fr); }
+    .cr-grid { grid-template-columns: 1fr 1fr; }
+    .rank-table thead th:nth-child(4), .rank-table td:nth-child(4) { display: none; }
+  }
+  @media (max-width: 600px) {
+    .cr-grid { grid-template-columns: 1fr; }
+    .main { padding: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="logo">📊 Creative Performance Dashboard</div>
+  <div class="last-updated" id="lastUpdated">데이터 없음</div>
+</div>
+
+<!-- Upload bar (compact) -->
+<div class="upload-bar" id="uploadBar">
+  <span style="font-size:15px">📂</span>
+  <span class="upload-bar-label">엑셀 업로드</span>
+  <span class="upload-bar-filename" id="uploadFilename">파일을 선택하면 대시보드가 자동으로 업데이트됩니다</span>
+  <button class="upload-btn" onclick="document.getElementById('fileInput').click()">파일 선택</button>
+</div>
+<input type="file" id="fileInput" accept=".xlsx,.xls,.csv" onchange="handleFileUpload(event)">
+
+<!-- Filter Bar -->
+<div class="filter-bar" id="filterBar">
+  <div class="filter-group">
+    <span class="filter-label">Period</span>
+    <button class="quick-btn" id="quickToday" onclick="setQuickDate('today', this)">Today</button>
+    <div class="wk-multi" id="wkMulti">
+      <button class="ch-toggle" id="wkToggleBtn" onclick="toggleWkDropdown(event)">Week</button>
+      <div class="ch-dropdown" id="wkDropdown">
+        <label class="ch-item ch-item-all">
+          <input type="checkbox" id="wkAll" onchange="onWkAllChange(this)"> All
+        </label>
+      </div>
+    </div>
+    <select id="monthSelect" onchange="setMonthDate(this.value)" style="min-width:90px">
+      <option value="">월 선택</option>
+    </select>
+    <input type="date" id="dateFrom">
+    <span style="color:var(--text-muted);font-size:12px">~</span>
+    <input type="date" id="dateTo">
+  </div>
+  <div class="filter-divider"></div>
+  <div class="filter-group">
+    <span class="filter-label">Type</span>
+    <select id="creativeTypeFilter">
+      <option value="all">전체</option>
+      <option value="Carousel">Carousel</option>
+      <option value="Video">Video</option>
+    </select>
+  </div>
+  <div class="filter-divider"></div>
+  <div class="filter-group">
+    <span class="filter-label">Launch Date</span>
+    <input type="date" id="prodDateFrom">
+    <span style="color:var(--text-muted);font-size:12px">~</span>
+    <input type="date" id="prodDateTo">
+  </div>
+  <div class="filter-divider"></div>
+  <div class="filter-group">
+    <span class="filter-label">Channel</span>
+    <div class="ch-multi" id="chMulti">
+      <button class="ch-toggle" id="chToggleBtn" onclick="toggleChDropdown(event)">전체</button>
+      <div class="ch-dropdown" id="chDropdown">
+        <label class="ch-item ch-item-all">
+          <input type="checkbox" id="chAll" checked onchange="onChAllChange(this)"> 전체
+        </label>
+      </div>
+    </div>
+  </div>
+  <button class="reset-btn" onclick="resetFilters()">↺ 초기화</button>
+  <button class="apply-btn" onclick="applyFilters()">Enter</button>
+</div>
+
+<!-- Tabs -->
+<div class="tab-bar">
+  <button class="tab-btn active-ua" id="tabUA" onclick="switchTab('UA')">
+    🎯 UA 캠페인
+    <span class="tab-count tab-count-ua" id="tabCountUA">0</span>
+  </button>
+  <button class="tab-btn" id="tabRE" onclick="switchTab('RE')">
+    🔁 RE 캠페인
+    <span class="tab-count tab-count-re" id="tabCountRE">0</span>
+  </button>
+  <button class="tab-btn" id="tabMEMO" onclick="switchTab('MEMO')">
+    📋 Memo
+    <span class="tab-count" id="tabCountMEMO" style="background:#f3f4f6;color:#6b7280">0</span>
+  </button>
+  <button class="tab-btn" id="tabTITLE" onclick="switchTab('TITLE')">
+    🏆 Title Ranking
+  </button>
+</div>
+
+<!-- Main -->
+<div class="main">
+
+  <!-- UA Panel -->
+  <div id="panelUA">
+    <div class="stats-row stats-ua" id="statsUA" style="display:none">
+      <div class="stat-card ua">
+        <div class="stat-label">First Purchase Users</div>
+        <div class="stat-value" id="ua-stat1">0</div>
+        <div class="stat-sub" id="ua-stat1-sub">명</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-label">총 광고비</div>
+        <div class="stat-value" id="ua-stat2">0</div>
+        <div class="stat-sub">USD</div>
+      </div>
+      <div class="stat-card gray">
+        <div class="stat-label">소재 수</div>
+        <div class="stat-value" id="ua-stat3">0</div>
+        <div class="stat-sub" id="ua-stat3-sub">개</div>
+      </div>
+      <div class="stat-card gray">
+        <div class="stat-label">Carousel / Video</div>
+        <div class="stat-value" id="ua-stat4">-</div>
+        <div class="stat-sub" id="ua-stat4-sub">Type별</div>
+      </div>
+    </div>
+    <div id="crSecUA" style="display:none">
+      <div class="section-bar">
+        <span class="section-title">🔥 UA Creative Performance</span>
+        <span class="sort-label">Sort:</span>
+        <button class="sort-btn active-ua" id="uaSort_metric" onclick="setSort('UA','metric',this)">FP Users</button>
+        <button class="sort-btn" id="uaSort_spend" onclick="setSort('UA','spend',this)">Cost</button>
+        <button class="sort-btn" id="uaSort_date" onclick="setSort('UA','date',this)">Launch Date</button>
+        <span class="result-count" id="uaResultCount"></span>
+      </div>
+      <div class="cr-grid" id="crGridUA"></div>
+      <div class="rank-table-wrap" id="rankWrapUA" style="margin-top:20px">
+        <div style="padding:10px 14px 6px;font-size:13px;font-weight:700;border-bottom:1px solid var(--border)">📊 Creative Performance Ranking</div>
+        <div id="rankTableUA"></div>
+        <div class="rank-table-note">* FP = First Purchase Users (첫 구매자 수)</div>
+      </div>
+    </div>
+    <div class="empty-state" id="emptyUA">
+      <div class="empty-icon">🎯</div>
+      <h3>UA 소재 데이터가 없습니다</h3>
+      <p>엑셀 파일을 업로드하면 UA 캠페인 소재 성과를 확인할 수 있습니다.</p>
+    </div>
+  </div>
+
+  <!-- RE Panel -->
+  <div id="panelRE" style="display:none">
+    <div class="stats-row stats-re" id="statsRE" style="display:none">
+      <div class="stat-card re">
+        <div class="stat-label">Order Complete Users</div>
+        <div class="stat-value" id="re-stat1">0</div>
+        <div class="stat-sub" id="re-stat1-sub">명</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-label">총 광고비</div>
+        <div class="stat-value" id="re-stat2">0</div>
+        <div class="stat-sub">USD</div>
+      </div>
+      <div class="stat-card gray">
+        <div class="stat-label">소재 수</div>
+        <div class="stat-value" id="re-stat3">0</div>
+        <div class="stat-sub" id="re-stat3-sub">개</div>
+      </div>
+      <div class="stat-card gray">
+        <div class="stat-label">Carousel / Video</div>
+        <div class="stat-value" id="re-stat4">-</div>
+        <div class="stat-sub" id="re-stat4-sub">Type별</div>
+      </div>
+    </div>
+    <div id="crSecRE" style="display:none">
+      <div class="section-bar">
+        <span class="section-title">🔥 RE Creative Performance</span>
+        <span class="sort-label">Sort:</span>
+        <button class="sort-btn active-re" id="reSort_metric" onclick="setSort('RE','metric',this)">OC Users</button>
+        <button class="sort-btn" id="reSort_spend" onclick="setSort('RE','spend',this)">Cost</button>
+        <button class="sort-btn" id="reSort_date" onclick="setSort('RE','date',this)">Launch Date</button>
+        <span class="result-count" id="reResultCount"></span>
+      </div>
+      <div class="cr-grid" id="crGridRE"></div>
+      <div class="rank-table-wrap" id="rankWrapRE" style="margin-top:20px">
+        <div style="padding:10px 14px 6px;font-size:13px;font-weight:700;border-bottom:1px solid var(--border)">📊 Creative Performance Ranking</div>
+        <div id="rankTableRE"></div>
+        <div class="rank-table-note">* OC = Order Complete Users (구매 완료자 수)</div>
+      </div>
+    </div>
+    <div class="empty-state" id="emptyRE">
+      <div class="empty-icon">🔁</div>
+      <h3>RE 소재 데이터가 없습니다</h3>
+      <p>엑셀 파일을 업로드하면 RE 캠페인 소재 성과를 확인할 수 있습니다.</p>
+    </div>
+  </div>
+
+  <!-- Memo Panel -->
+  <div id="panelMEMO" style="display:none">
+    <div class="memo-layout">
+
+      <!-- 메모 작성 폼 -->
+      <div class="memo-form-card">
+        <h3>✏️ 새 메모 작성</h3>
+        <div class="form-row">
+          <label>소재명</label>
+          <div class="datalist-input">
+            <input type="text" id="creativeInput" placeholder="소재명 입력 또는 검색..." autocomplete="off"
+              oninput="onCreativeInput(this.value)" onblur="setTimeout(()=>document.getElementById('autocompleteList').style.display='none',150)">
+            <div class="autocomplete-list" id="autocompleteList"></div>
+          </div>
+        </div>
+        <div class="form-row">
+          <label>우선순위</label>
+          <div class="priority-btns">
+            <button class="prio-btn" id="prioHigh" onclick="selectPrio('높음')">🔴 높음</button>
+            <button class="prio-btn" id="prioMid"  onclick="selectPrio('중간')">🟡 중간</button>
+            <button class="prio-btn" id="prioLow"  onclick="selectPrio('낮음')">🟢 낮음</button>
+          </div>
+        </div>
+        <div class="form-row">
+          <label>상태</label>
+          <div class="status-btns">
+            <button class="stat-btn" onclick="selectStat(this, '✅ 잘됨')">✅ 잘됨</button>
+            <button class="stat-btn" onclick="selectStat(this, '🔁 변형 필요')">🔁 변형 필요</button>
+            <button class="stat-btn" onclick="selectStat(this, '❌ 중단')">❌ 중단</button>
+            <button class="stat-btn" onclick="selectStat(this, '📝 검토중')">📝 검토중</button>
+          </div>
+        </div>
+        <div class="form-row">
+          <label>메모 내용</label>
+          <textarea id="memoText" placeholder="이 소재에 대한 의견, 개선 방향, 레퍼런스 등을 자유롭게 입력하세요..."></textarea>
+        </div>
+        <button class="memo-save-btn" onclick="saveMemo()">💾 메모 저장</button>
+      </div>
+
+      <!-- 메모 리스트 -->
+      <div>
+        <div class="memo-list-header">
+          <h3>📋 저장된 메모 <span id="memoCountBadge" style="font-size:12px;color:var(--text-muted);font-weight:400"></span></h3>
+          <div class="memo-filter-row">
+            <button class="memo-filter-chip active" onclick="filterMemos('전체', this)">전체</button>
+            <button class="memo-filter-chip" onclick="filterMemos('높음', this)">🔴 높음</button>
+            <button class="memo-filter-chip" onclick="filterMemos('중간', this)">🟡 중간</button>
+            <button class="memo-filter-chip" onclick="filterMemos('낮음', this)">🟢 낮음</button>
+            <button class="memo-filter-chip" onclick="filterMemos('✅ 잘됨', this)">✅ 잘됨</button>
+            <button class="memo-filter-chip" onclick="filterMemos('🔁 변형 필요', this)">🔁 변형</button>
+            <button class="memo-filter-chip" onclick="filterMemos('❌ 중단', this)">❌ 중단</button>
+          </div>
+        </div>
+        <div class="memo-cards" id="memoCards">
+          <div class="memo-empty">
+            <div class="memo-empty-icon">📋</div>
+            <div>아직 메모가 없습니다.<br>왼쪽 폼에서 첫 메모를 작성해보세요.</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 작품소진 순위 Panel -->
+  <div id="panelTITLE" style="display:none">
+    <div class="section-title" style="margin-bottom:16px">🏆 Title Ranking <span class="badge" style="background:#f1f5f9;color:#64748b;font-size:11px;padding:3px 10px;border-radius:12px">Period filter applied</span></div>
+    <div class="title-rank-grid">
+      <!-- UA Cost -->
+      <div class="title-rank-card">
+        <div class="title-rank-head">
+          💰 UA Cost
+          <span class="badge" style="background:var(--ua-light);color:var(--ua-color)">UA 캠페인</span>
+        </div>
+        <table class="title-rank-table">
+          <thead><tr><th>#</th><th>작품명</th><th style="text-align:right">Cost</th></tr></thead>
+          <tbody id="titleUACost"></tbody>
+        </table>
+      </div>
+      <!-- First Purchase Users -->
+      <div class="title-rank-card">
+        <div class="title-rank-head">
+          🎯 First Purchase Users
+          <span class="badge" style="background:var(--ua-light);color:var(--ua-color)">UA 캠페인</span>
+        </div>
+        <table class="title-rank-table">
+          <thead><tr><th>#</th><th>작품명</th><th style="text-align:right">Users</th></tr></thead>
+          <tbody id="titleUAFP"></tbody>
+        </table>
+      </div>
+      <!-- RE Cost -->
+      <div class="title-rank-card">
+        <div class="title-rank-head">
+          💰 RE Cost
+          <span class="badge" style="background:var(--re-light);color:var(--re-color)">RE 캠페인</span>
+        </div>
+        <table class="title-rank-table">
+          <thead><tr><th>#</th><th>작품명</th><th style="text-align:right">Cost</th></tr></thead>
+          <tbody id="titleRECost"></tbody>
+        </table>
+      </div>
+      <!-- Order Complete Users -->
+      <div class="title-rank-card">
+        <div class="title-rank-head">
+          🔁 Order Complete Users
+          <span class="badge" style="background:var(--re-light);color:var(--re-color)">RE 캠페인</span>
+        </div>
+        <table class="title-rank-table">
+          <thead><tr><th>#</th><th>작품명</th><th style="text-align:right">Users</th></tr></thead>
+          <tbody id="titleREOC"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="empty-state" id="emptyTITLE" style="display:none">
+      <div class="empty-icon">🏆</div>
+      <h3>데이터가 없습니다</h3>
+      <p>엑셀 파일을 업로드하면 작품별 소진 순위를 확인할 수 있습니다.</p>
+    </div>
+  </div>
+
+</div><!-- /.main -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let rawData = [];
+  let dataUA = [], dataRE = [];
+  let sortUA = 'metric', sortRE = 'metric';
+  let activeTab = 'UA';
+  let activeDatePreset = 'all';
+
+  // ─── compact 포맷 디코딩 ─────────────────────────────────────────
+  // 신형: [d, ca, ct, cr, ty, pd, ch, sp, fp, oc] (ch 추가)
+  // 구형: [d, ca, ct, cr, ty, pd, sp, fp, oc]
+  function expandKeys(payload) {
+    const L = payload.lookup;
+    const TM = payload.thumbMap || {};
+    window._thumbMap = Object.assign(window._thumbMap || {}, TM);
+    function getThumb(cr, ctype) {
+      var t = (cr.split('_')[0]||cr).toLowerCase();
+      if (ctype === 'Video') return TM[t+'__vid'] || TM[t+'__img'] || TM[t] || '';
+      return TM[t+'__img'] || TM[t] || '';
+    }
+    if (L && Array.isArray(payload.rows[0])) {
+      const hasCh = !!L.ch;
+      return payload.rows.map(r => {
+        const cr = L.cr[r[3]] || '';
+        const ctype = L.ty ? (L.ty[r[4]] || '') : '';
+        return {
+          date:         L.d [r[0]] || '',
+          campaign:     L.ca[r[1]] || '',
+          campType:     L.ct[r[2]] || '',
+          creative:     cr,
+          creativeType: ctype,
+          prodDate:     L.pd[r[5]] || '',
+          channel:      hasCh ? (L.ch[r[6]] || '') : '',
+          spend:        hasCh ? (r[7] || 0) : (r[6] || 0),
+          firstPurch:   hasCh ? (r[8] || 0) : (r[7] || 0),
+          orderComp:    hasCh ? (r[9] || 0) : (r[8] || 0),
+          thumbUrl:     getThumb(cr, ctype),
+          status: 'Live',
+        };
+      });
+    }
+    return payload.rows.map(r => {
+      const cr = String(r.cr || r.creative || '');
+      const ctype = r.ty || r.creativeType || '';
+      const ctype2 = r.ty || r.creativeType || '';
+      return {
+        date:         r.d  || r.date         || '',
+        campaign:     r.ca || r.campaign     || '',
+        campType:     r.ct || r.campType     || '',
+        creative:     cr,
+        creativeType: ctype2,
+        prodDate:     r.pd || r.prodDate     || '',
+        channel:      r.ch || r.channel      || '',
+        spend:        r.sp ?? r.spend        ?? 0,
+        firstPurch:   r.fp ?? r.firstPurch   ?? 0,
+        orderComp:    r.oc ?? r.orderComp    ?? 0,
+        thumbUrl:     getThumb(cr, ctype2),
+        status: 'Live',
+      };
+    });
+  }
+
+  // ─── data.js 자동 로드 + 초기화 ──────────────────────────────────
+  window.addEventListener('DOMContentLoaded', () => {
+    updateMemoCount();
+    selectPrio('중간');
+    if (window.DASHBOARD_DATA && window.DASHBOARD_DATA.rows) {
+      const d = window.DASHBOARD_DATA;
+      rawData = expandKeys(d);
+      document.getElementById('lastUpdated').textContent =
+        `자동 로드 · ${d.source} · ${d.updatedAt}`;
+      document.getElementById('uploadFilename').textContent = `${d.source} · ${d.count.toLocaleString()}행 (자동 로드)`;
+      if (d.weeks && d.weeks.length) populateWeekSelect(d.weeks);
+      populateChannelFilter();
+      populateMonthSelect();
+      setDefaultWeeklyRange();
+      applyFilters();
+    }
+  });
+
+  // ─── 파일 업로드 ──────────────────────────────────────────────────
+  function handleFileUpload(e) { const f = e.target.files[0]; if (f) processFile(f); e.target.value = ''; }
+
+  function processFile(file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+        const htSheet = wb.SheetNames.find(n => n.toUpperCase() === 'RAW_ACTUAL');
+        let json, mode;
+        if (htSheet) {
+          json = XLSX.utils.sheet_to_json(wb.Sheets[htSheet], { defval: '' });
+          mode = 'HT';
+        } else {
+          json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+          mode = json.length > 0 && ('Campaign Goal' in json[0]) ? 'HT' : 'STANDARD';
+        }
+        rawData = mode === 'HT' ? normalizeHT(json) : normalizeData(json);
+        if (rawData.length === 0) { showToast('⚠️ 데이터가 없습니다. 컬럼명을 확인해주세요.', 4000); return; }
+        document.getElementById('lastUpdated').textContent = '업데이트: ' + new Date().toLocaleString('ko-KR');
+        document.getElementById('uploadFilename').textContent = `${file.name} · ${rawData.length.toLocaleString()}행`;
+        populateChannelFilter();
+        populateMonthSelect();
+        // 데이터 날짜 기준으로 주간 목록 생성 후 표시
+        // RULE탭 주간 우선 사용, 없을 때만 데이터 기준으로 생성
+        populateWeekSelect(window._dashWeeks && window._dashWeeks.length ? window._dashWeeks : buildWeeksFromRawData(rawData));
+        document.getElementById('dateFrom').value = '';
+        document.getElementById('dateTo').value   = '';
+        document.getElementById('monthSelect').value = '';
+        document.querySelectorAll('.quick-btn').forEach(function(b){ b.classList.remove('active'); });
+        setDefaultWeeklyRange();
+        applyFilters();
+        showToast(`✅ ${rawData.length.toLocaleString()}개 행 로드 완료`);
+      } catch(err) { showToast('❌ 오류: ' + err.message, 4000); }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  // ─── HT 파싱 ──────────────────────────────────────────────────────
+  function extractProdDate(name) {
+    const s = String(name || '');
+    const m8 = s.match(/[_-](\d{8})(?:[^0-9]|$)/);
+    if (m8) { const d = m8[1]; return `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}`; }
+    const m6 = s.match(/[_-](\d{6})(?:[^0-9]|$)/);
+    if (m6) { const d = m6[1]; return `20${d.slice(0,2)}-${d.slice(2,4)}-${d.slice(4,6)}`; }
+    return '';
+  }
+
+  function mapCreativeType(유형, creative) {
+    const t = String(유형 || '').toLowerCase();
+    if (t.includes('video') || t.includes('nativevideo')) return 'Video';
+    if (t.includes('carousel') || t.includes('slide') || t.includes('image')) return 'Carousel';
+    const c = String(creative || '').toLowerCase();
+    if (c.includes('video') || c.includes('.mp4')) return 'Video';
+    if (c.includes('carousel') || c.includes('slide') || c.includes('image')) return 'Carousel';
+    return 'Carousel';
+  }
+
+  function normalizeHT(rows) {
+    return rows
+      .filter(r => {
+        const goal = String(r['Campaign Goal'] || '').trim();
+        if (goal !== 'UA' && goal !== 'RE') return false;
+        // google.adwords 채널 제외
+        const ch = String(r['Channel'] || '').trim().toLowerCase();
+        if (ch.includes('google.adwords') || ch.includes('adwords')) return false;
+        return true;
+      })
+      .map(r => {
+        const creative = String(r['Ad Creative'] || '').trim();
+        return {
+          date:         toDateStr(r['Date']),
+          campaign:     String(r['Campaign'] || '').trim(),
+          campType:     String(r['Campaign Goal']).trim(),
+          creative:     creative,
+          creativeType: mapCreativeType(r['유형'], creative),
+          prodDate:     extractProdDate(creative),
+          spend:        parseFloat(String(r['Cost (Channel)'] || '0').replace(/[^0-9.]/g,'')) || 0,
+          firstPurch:   parseInt(String(r['first_purchase Users (App)'] || '0').replace(/[^0-9]/g,'')) || 0,
+          orderComp:    parseInt(String(r['Order Complete Users (App)'] || '0').replace(/[^0-9]/g,'')) || 0,
+          channel:      String(r['Channel'] || '').trim(),
+          thumbUrl:     (function(){
+            var TM = window._thumbMap||{};
+            var t = (creative.split('_')[0]||creative).toLowerCase();
+            var ct = mapCreativeType(r['유형'], creative);
+            if (ct === 'Video') return TM[t+'__vid']||TM[t+'__img']||TM[t]||'';
+            return TM[t+'__img']||TM[t]||'';
+          })(),
+          status:       'Live',
+        };
+      })
+      .filter(r => r.date);
+  }
+
+  // ─── 표준 포맷 파싱 ───────────────────────────────────────────────
+  const COL_MAP = {
+    date:        ['날짜','date','Date'],
+    campaign:    ['캠페인명','campaign','Campaign'],
+    campType:    ['캠페인유형','campaign_type','캠페인 유형'],
+    creative:    ['소재명','creative','Creative'],
+    creativeType:['소재유형','creative_type','소재 유형'],
+    prodDate:    ['소재제작일','제작일','prod_date','소재 제작일'],
+    spend:       ['소진광고비','광고비','spend','Spend','소진 광고비','사용된 광고비'],
+    firstPurch:  ['첫구매자수','첫 구매자수','first_purchase','첫구매자 수','첫 구매자 수'],
+    orderComp:   ['구매완료자수','구매 완료자수','order_complete','구매완료자 수','구매 완료자 수'],
+    thumbUrl:    ['썸네일URL','썸네일 URL','thumb_url','thumbnail'],
+    status:      ['상태','status','Status'],
+    channel:     ['채널','channel','Channel'],
+  };
+  function findCol(row, keys) {
+    const rk = Object.keys(row);
+    for (const k of keys) { const f = rk.find(r => r.trim().toLowerCase() === k.trim().toLowerCase()); if (f !== undefined) return row[f]; }
+    return '';
+  }
+  function normalizeData(rows) {
+    return rows.map(row => {
+      const ch = String(findCol(row, COL_MAP.channel) || '').toLowerCase();
+      if (ch.includes('google.adwords') || ch.includes('adwords')) return null;
+      return {
+        date:         toDateStr(findCol(row, COL_MAP.date)),
+        campaign:     String(findCol(row, COL_MAP.campaign)).trim(),
+        campType:     String(findCol(row, COL_MAP.campType)).trim().toUpperCase().includes('RE') ? 'RE' : 'UA',
+        creative:     String(findCol(row, COL_MAP.creative)).trim(),
+        creativeType: String(findCol(row, COL_MAP.creativeType)).trim(),
+        prodDate:     toDateStr(findCol(row, COL_MAP.prodDate)),
+        spend:        parseFloat(String(findCol(row, COL_MAP.spend)).replace(/[^0-9.]/g,'')) || 0,
+        firstPurch:   parseInt(String(findCol(row, COL_MAP.firstPurch)).replace(/[^0-9]/g,'')) || 0,
+        orderComp:    parseInt(String(findCol(row, COL_MAP.orderComp)).replace(/[^0-9]/g,'')) || 0,
+        thumbUrl:     String(findCol(row, COL_MAP.thumbUrl)).trim(),
+        status:       String(findCol(row, COL_MAP.status)).trim() || 'Live',
+      };
+    }).filter(r => r && r.date && (r.campaign || r.creative));
+  }
+
+  // ─── 날짜 변환 ────────────────────────────────────────────────────
+  function toDateStr(val) {
+    if (!val) return '';
+    if (val instanceof Date) return val.toISOString().split('T')[0];
+    if (typeof val === 'number') { const d = new Date(Math.round((val - 25569) * 86400 * 1000)); return d.toISOString().split('T')[0]; }
+    const s = String(val).trim();
+    const m = s.match(/(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/);
+    if (m) return `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+    return s;
+  }
+
+  // ─── 날짜 프리셋 ──────────────────────────────────────────────────
+  function setQuickDate(preset, btn) {
+    activeDatePreset = preset;
+    document.querySelectorAll('.quick-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    const today = new Date();
+    const fmt = d => d.toISOString().split('T')[0];
+    if (preset === 'today') {
+      document.getElementById('dateFrom').value = fmt(today);
+      document.getElementById('dateTo').value   = fmt(today);
+      document.querySelectorAll('.wk-wk').forEach(function(c) { c.checked = false; });
+      if (typeof updateWkToggleLabel !== 'undefined') updateWkToggleLabel();
+      document.getElementById('monthSelect').value = '';
+    }
+  }
+
+  // ─── Month select ──────────────────────────────────────────────────
+  function setMonthDate(yearMonth) {
+    if (!yearMonth) return;
+    const [y, m] = yearMonth.split('-');
+    const lastDay = new Date(parseInt(y), parseInt(m), 0).getDate();
+    document.getElementById('dateFrom').value = `${y}-${m}-01`;
+    document.getElementById('dateTo').value   = `${y}-${m}-${String(lastDay).padStart(2,'0')}`;
+    document.querySelectorAll('.wk-wk').forEach(function(c) { c.checked = false; });
+    if (typeof updateWkToggleLabel !== 'undefined') updateWkToggleLabel();
+    document.querySelectorAll('.quick-btn').forEach(function(b) { b.classList.remove('active'); });
+  }
+
+  // ─── Default week selection ───────────────────────────────────
+  function setDefaultWeeklyRange() {
+    // rawData 최신 날짜 기준으로 주간 선택
+    var dataDates = rawData.map(function(r){ return r.date; }).filter(Boolean).sort();
+    var latestDate = dataDates.length ? dataDates[dataDates.length - 1] : new Date().toISOString().split('T')[0];
+    const allWk = document.querySelectorAll('.wk-wk');
+    if (allWk.length) {
+      allWk.forEach(function(cb) { cb.checked = false; });
+      let found = false;
+      allWk.forEach(function(cb) {
+        const p = cb.value.split('|');
+        if (latestDate >= p[0] && latestDate <= p[1]) { cb.checked = true; found = true; }
+      });
+      if (!found) allWk[0].checked = true;  // 최신 주 선택
+      document.getElementById('wkAll').checked = false;
+      updateWkToggleLabel();
+      document.getElementById('monthSelect').value = '';
+      document.querySelectorAll('.quick-btn').forEach(function(b) { b.classList.remove('active'); });
+      return;
+    }
+    // Fallback
+    const weeks = window._dashWeeks || [];
+    let found = null;
+    for (let i = 0; i < weeks.length; i++) {
+      if (today >= weeks[i][0] && today <= weeks[i][1]) { found = weeks[i]; break; }
+    }
+    if (!found && weeks.length) found = weeks[weeks.length - 1];
+    if (!found && rawData.length) {
+      const dates = rawData.map(function(r) { return r.date; }).filter(Boolean).sort();
+      const latest = dates[dates.length - 1];
+      if (latest) {
+        const d = new Date(latest); const day = d.getDay();
+        const sun = new Date(d); sun.setDate(d.getDate() - day);
+        const sat = new Date(d); sat.setDate(d.getDate() + (6 - day));
+        found = [sun.toISOString().split('T')[0], sat.toISOString().split('T')[0]];
+      }
+    }
+    if (found) {
+      document.getElementById('dateFrom').value = found[0];
+      document.getElementById('dateTo').value   = found[1];
+    }
+    document.getElementById('monthSelect').value = '';
+    document.querySelectorAll('.quick-btn').forEach(function(b) { b.classList.remove('active'); });
+  }
+
+  // populateWeekSelect replaced below
+
+  // ─── 채널 multi-select populate ───────────────────────────────────
+  function populateChannelFilter() {
+    const channels = [...new Set(rawData.map(r => r.channel).filter(Boolean))].sort();
+    const dropdown = document.getElementById('chDropdown');
+    // 기존 개별 채널 항목 제거 (전체 체크박스는 유지)
+    dropdown.querySelectorAll('.ch-item:not(.ch-item-all)').forEach(el => el.remove());
+    channels.forEach(ch => {
+      const lbl = document.createElement('label');
+      lbl.className = 'ch-item';
+      lbl.innerHTML = `<input type="checkbox" class="ch-ch" value="${ch}" checked onchange="onChChange()"> ${ch}`;
+      dropdown.appendChild(lbl);
+    });
+    updateChToggleLabel();
+  }
+
+  function toggleChDropdown(e) {
+    e.stopPropagation();
+    document.getElementById('chDropdown').classList.toggle('open');
+  }
+  document.addEventListener('click', function() {
+    var cd = document.getElementById('chDropdown');
+    var wd = document.getElementById('wkDropdown');
+    if (cd) cd.classList.remove('open');
+    if (wd) wd.classList.remove('open');
+  });
+
+  function onChAllChange(cb) {
+    document.querySelectorAll('.ch-ch').forEach(c => c.checked = cb.checked);
+    updateChToggleLabel();
+  }
+  function onChChange() {
+    const all  = document.querySelectorAll('.ch-ch');
+    const chkd = document.querySelectorAll('.ch-ch:checked');
+    document.getElementById('chAll').checked = all.length === chkd.length;
+    updateChToggleLabel();
+  }
+  function updateChToggleLabel() {
+    const all  = document.querySelectorAll('.ch-ch');
+    const chkd = [...document.querySelectorAll('.ch-ch:checked')];
+    const btn = document.getElementById('chToggleBtn');
+    if (!all.length || all.length === chkd.length) btn.textContent = '전체';
+    else if (chkd.length === 0) btn.textContent = '선택 없음';
+    else if (chkd.length <= 2) btn.textContent = chkd.map(c => c.value).join(', ');
+    else btn.textContent = chkd[0].value + ' 외 ' + (chkd.length - 1) + '개';
+  }
+  function getSelectedChannels() {
+    const chkd = [...document.querySelectorAll('.ch-ch:checked')];
+    const all  = document.querySelectorAll('.ch-ch');
+    if (!all.length || chkd.length === all.length) return null; // null = 전체
+    return new Set(chkd.map(c => c.value));
+  }
+
+  // ─── 월 선택 동적 populate ────────────────────────────────────────
+  function populateMonthSelect() {
+    const months = [...new Set(rawData.map(r => r.date?.slice(0,7)).filter(Boolean))].sort().reverse();
+    const sel = document.getElementById('monthSelect');
+    sel.innerHTML = '<option value="">월 선택</option>';
+    months.forEach(m => {
+      const [y, mo] = m.split('-');
+      const opt = document.createElement('option');
+      opt.value = m; opt.textContent = `${y}년 ${parseInt(mo)}월`;
+      sel.appendChild(opt);
+    });
+  }
+
+  // ─── 필터 적용 ────────────────────────────────────────────────────
+  function applyFilters() {
+    const dateFrom   = document.getElementById('dateFrom').value;
+    const dateTo     = document.getElementById('dateTo').value;
+    const ctype      = document.getElementById('creativeTypeFilter').value;
+    const prodFrom   = document.getElementById('prodDateFrom').value;
+    const prodTo     = document.getElementById('prodDateTo').value;
+    const selCh      = getSelectedChannels();
+    const weekRanges = getSelectedWeekRanges();
+    function inDateRange(d) {
+      if (weekRanges) return weekRanges.some(function(w) { return d >= w[0] && d <= w[1]; });
+      if (dateFrom && d < dateFrom) return false;
+      if (dateTo   && d > dateTo)   return false;
+      return true;
+    }
+
+    function aggregate(campType) {
+      const map = {};
+      rawData.forEach(r => {
+        if (r.campType !== campType) return;
+        if (!inDateRange(r.date)) return;
+        if (ctype !== 'all' && !r.creativeType.toLowerCase().includes(ctype.toLowerCase())) return;
+        if (prodFrom && r.prodDate && r.prodDate < prodFrom) return;
+        if (prodTo && r.prodDate && r.prodDate > prodTo) return;
+        if (selCh && !selCh.has(r.channel)) return;
+        const key = r.creative || r.campaign;
+        if (!map[key]) map[key] = { ...r, spend: 0, firstPurch: 0, orderComp: 0 };
+        map[key].spend      += r.spend;
+        map[key].firstPurch += r.firstPurch;
+        map[key].orderComp  += r.orderComp;
+        if (r.prodDate) map[key].prodDate = map[key].prodDate || r.prodDate;
+        if (r.thumbUrl) map[key].thumbUrl = r.thumbUrl;
+      });
+      return Object.values(map);
+    }
+
+    dataUA = sortArr(aggregate('UA'), sortUA);
+    dataRE = sortArr(aggregate('RE'), sortRE);
+
+    document.getElementById('tabCountUA').textContent = dataUA.length;
+    document.getElementById('tabCountRE').textContent = dataRE.length;
+    renderPanel('UA');
+    renderPanel('RE');
+    if (activeTab === 'TITLE') renderTitleRank();
+  }
+
+  function resetFilters() {
+    document.getElementById('creativeTypeFilter').value = 'all';
+    document.getElementById('chAll').checked = true;
+    document.querySelectorAll('.ch-ch').forEach(function(c) { c.checked = true; });
+    updateChToggleLabel();
+    document.querySelectorAll('.wk-wk').forEach(function(c) { c.checked = false; });
+    if (document.getElementById('wkAll')) document.getElementById('wkAll').checked = false;
+    if (typeof updateWkToggleLabel !== 'undefined') updateWkToggleLabel();
+    document.getElementById('prodDateFrom').value = '';
+    document.getElementById('prodDateTo').value = '';
+    document.getElementById('monthSelect').value = '';
+    document.querySelectorAll('.quick-btn').forEach(function(b) { b.classList.remove('active'); });
+    setDefaultWeeklyRange();
+    applyFilters();
+  }
+
+  // ─── 정렬 ─────────────────────────────────────────────────────────
+  function sortArr(arr, type) {
+    return [...arr].sort((a, b) => {
+      if (type === 'metric') return (b.campType === 'UA' ? b.firstPurch : b.orderComp) - (a.campType === 'UA' ? a.firstPurch : a.orderComp);
+      if (type === 'spend')  return b.spend - a.spend;
+      if (type === 'date')   return (b.prodDate||'').localeCompare(a.prodDate||'');
+      return 0;
+    });
+  }
+
+  function setSort(tab, type, btn) {
+    if (tab === 'UA') {
+      sortUA = type;
+      document.querySelectorAll('[id^="uaSort_"]').forEach(b => b.classList.remove('active-ua'));
+      btn.classList.add('active-ua');
+      dataUA = sortArr(dataUA, sortUA);
+    } else {
+      sortRE = type;
+      document.querySelectorAll('[id^="reSort_"]').forEach(b => b.classList.remove('active-re'));
+      btn.classList.add('active-re');
+      dataRE = sortArr(dataRE, sortRE);
+    }
+    renderPanel(tab);
+  }
+
+  // ─── Week multi-select JS ─────────────────────────────────────────
+  function toggleWkDropdown(e) {
+    e.stopPropagation();
+    document.getElementById('wkDropdown').classList.toggle('open');
+    document.getElementById('chDropdown').classList.remove('open');
+  }
+  function buildWeeksFromRawData(data) {
+    var seen = {}, weeks = [];
+    data.map(function(r){ return r.date; }).filter(Boolean).sort().forEach(function(d) {
+      var dt = new Date(d+'T00:00:00');
+      var day = dt.getDay();
+      var sun = new Date(dt); sun.setDate(dt.getDate() - day);
+      var sat = new Date(dt); sat.setDate(dt.getDate() + (6 - day));
+      var key = sun.toISOString().split('T')[0];
+      if (!seen[key]) { seen[key] = true; weeks.push([key, sat.toISOString().split('T')[0]]); }
+    });
+    return weeks;
+  }
+
+  function populateWeekSelect(weeks) {
+    if (!weeks || !weeks.length) return;
+    window._dashWeeks = weeks;
+    var dropdown = document.getElementById('wkDropdown');
+    dropdown.querySelectorAll('.wk-wk-item').forEach(function(el) { el.remove(); });
+
+    // rawData 최신 날짜 기준으로 주간 선택
+    var dataDates = rawData.map(function(r){ return r.date; }).filter(Boolean).sort();
+    var latestDate = dataDates.length ? dataDates[dataDates.length - 1] : null;
+
+    // rawData 날짜 범위와 겹치는 RULE탭 주간만 필터링
+    var dataWeeks = latestDate ? weeks.filter(function(w) {
+      return w[1] >= (dataDates[0] || '') && w[0] <= latestDate;
+    }) : weeks;
+    if (!dataWeeks.length) dataWeeks = weeks;
+
+    // 최신 8주 (내림차순)
+    var display8 = dataWeeks.slice().reverse().slice(0, 8);
+    var fmt = function(d) { var dt = new Date(d+'T00:00:00'); return (dt.getMonth()+1)+'/'+String(dt.getDate()).padStart(2,'0'); };
+    var anyChecked = false;
+    display8.forEach(function(w) {
+      var s = w[0], e = w[1];
+      var isLatest = latestDate && latestDate >= s && latestDate <= e;
+      if (isLatest) anyChecked = true;
+      var lbl = document.createElement('label');
+      lbl.className = 'ch-item wk-wk-item';
+      lbl.innerHTML = '<input type="checkbox" class="wk-wk" value="'+s+'|'+e+'"'+(isLatest?' checked':'')+' onchange="onWkChange()"> '+fmt(s)+'~'+fmt(e);
+      dropdown.appendChild(lbl);
+    });
+    // 해당 주가 없으면 첫 번째(가장 최신) 선택
+    if (!anyChecked) {
+      var firstCb = dropdown.querySelector('.wk-wk');
+      if (firstCb) firstCb.checked = true;
+    }
+    updateWkToggleLabel();
+  }
+  function onWkAllChange(cb) {
+    document.querySelectorAll('.wk-wk').forEach(function(c) { c.checked = cb.checked; });
+    updateWkToggleLabel();
+    applyFilters();
+  }
+  function onWkChange() {
+    var all = document.querySelectorAll('.wk-wk');
+    var chkd = document.querySelectorAll('.wk-wk:checked');
+    document.getElementById('wkAll').checked = all.length > 0 && all.length === chkd.length;
+    updateWkToggleLabel();
+    applyFilters();
+  }
+  function updateWkToggleLabel() {
+    var chkd = Array.from(document.querySelectorAll('.wk-wk:checked'));
+    var btn = document.getElementById('wkToggleBtn');
+    if (!btn) return;
+    var fmt = function(d) { var dt = new Date(d+'T00:00:00'); return (dt.getMonth()+1)+'/'+String(dt.getDate()).padStart(2,'0'); };
+    if (!chkd.length) { btn.textContent = 'Week'; return; }
+    if (chkd.length === 1) { var p = chkd[0].value.split('|'); btn.textContent = fmt(p[0])+'~'+fmt(p[1]); }
+    else btn.textContent = chkd.length + ' weeks';
+  }
+  function getSelectedWeekRanges() {
+    var chkd = Array.from(document.querySelectorAll('.wk-wk:checked'));
+    return chkd.length ? chkd.map(function(c) { return c.value.split('|'); }) : null;
+  }
+
+  // ─── Tab switching ────────────────────────────────────────────────
+  function switchTab(tab) {
+    activeTab = tab;
+    ['UA','RE','MEMO','TITLE'].forEach(function(t) {
+      document.getElementById('panel'+t).style.display = t === tab ? 'block' : 'none';
+      var btn = document.getElementById('tab'+t);
+      if (!btn) return;
+      btn.className = 'tab-btn' + (t === tab ? (t === 'RE' ? ' active-re' : ' active-ua') : '');
+    });
+    document.getElementById('filterBar').style.display = tab === 'MEMO' ? 'none' : '';
+    if (tab === 'MEMO')  renderMemos();
+    if (tab === 'TITLE') renderTitleRank();
+  }
+
+  // ─── Title Ranking ────────────────────────────────────────────────
+  function renderTitleRank() {
+    if (!rawData.length) {
+      ['titleUACost','titleUAFP','titleRECost','titleREOC'].forEach(function(id) {
+        document.getElementById(id).innerHTML = '<tr><td colspan="3" style="padding:20px;text-align:center;color:var(--text-muted)">No data</td></tr>';
+      });
+      document.getElementById('emptyTITLE').style.display = 'none';
+      return;
+    }
+    document.getElementById('emptyTITLE').style.display = 'none';
+    var weekRanges = getSelectedWeekRanges();
+    var dateFrom = document.getElementById('dateFrom').value;
+    var dateTo   = document.getElementById('dateTo').value;
+    var selCh    = getSelectedChannels();
+    function inRange(d) {
+      if (weekRanges) return weekRanges.some(function(w) { return d >= w[0] && d <= w[1]; });
+      if (dateFrom && d < dateFrom) return false;
+      if (dateTo   && d > dateTo)   return false;
+      return true;
+    }
+    var uaMap = {}, reMap = {};
+    rawData.forEach(function(r) {
+      if (!inRange(r.date)) return;
+      if (selCh && !selCh.has(r.channel)) return;
+      var title = extractTitle(r.creative || r.campaign);
+      if (r.campType === 'UA') {
+        if (!uaMap[title]) uaMap[title] = { spend: 0, fp: 0 };
+        uaMap[title].spend += r.spend; uaMap[title].fp += r.firstPurch;
+      } else if (r.campType === 'RE') {
+        if (!reMap[title]) reMap[title] = { spend: 0, oc: 0 };
+        reMap[title].spend += r.spend; reMap[title].oc += r.orderComp;
+      }
+    });
+    function makeRows(map, valKey, cls, fmt) {
+      var sorted = Object.entries(map).sort(function(a,b) { return b[1][valKey] - a[1][valKey]; }).slice(0, 20);
+      if (!sorted.length) return '<tr><td colspan="3" style="padding:20px;text-align:center;color:var(--text-muted)">No data</td></tr>';
+      return sorted.map(function(kv, i) {
+        return '<tr><td class="title-num">'+(i+1)+'</td><td class="title-name" title="'+escHtml(kv[0])+'">'+escHtml(kv[0])+'</td><td class="title-val '+cls+'">'+fmt(kv[1][valKey])+'</td></tr>';
+      }).join('');
+    }
+    document.getElementById('titleUACost').innerHTML = makeRows(uaMap,'spend','val-spend',formatSpend);
+    document.getElementById('titleUAFP').innerHTML   = makeRows(uaMap,'fp','val-ua',function(n) { return n.toLocaleString()+' users'; });
+    document.getElementById('titleRECost').innerHTML = makeRows(reMap,'spend','val-spend',formatSpend);
+    document.getElementById('titleREOC').innerHTML   = makeRows(reMap,'oc','val-re',function(n) { return n.toLocaleString()+' users'; });
+  }
+
+  // ─── Memo ──────────────────────────────────────────────────────────
+  var MEMO_KEY = 'creative_dashboard_memos';
+  var selectedPrio = 'medium';
+  var selectedStat = 'reviewing';
+  var memoFilter   = 'all';
+
+  function loadMemos() { try { return JSON.parse(localStorage.getItem(MEMO_KEY) || '[]'); } catch(e) { return []; } }
+  function saveMemos(list) { localStorage.setItem(MEMO_KEY, JSON.stringify(list)); }
+
+  function updateMemoCount() {
+    var n = loadMemos().length;
+    var el = document.getElementById('tabCountMEMO');
+    if (el) el.textContent = n;
+    var b = document.getElementById('memoCountBadge');
+    if (b) b.textContent = n ? '(' + n + ')' : '';
+  }
+
+  function selectPrio(p) {
+    selectedPrio = p;
+    var map = { 'high': 'prioHigh', 'medium': 'prioMid', 'low': 'prioLow' };
+    var clsMap = { 'high': 'sel-high', 'medium': 'sel-mid', 'low': 'sel-low' };
+    // support Korean input too
+    if (p === 'high' || p === '높음') { selectedPrio = 'high'; p = 'high'; }
+    else if (p === 'low' || p === '낙음') { selectedPrio = 'low'; p = 'low'; }
+    else { selectedPrio = 'medium'; p = 'medium'; }
+    ['high','medium','low'].forEach(function(k) {
+      var el = document.getElementById(map[k]);
+      if (el) el.className = 'prio-btn' + (k === p ? ' ' + clsMap[k] : '');
+    });
+  }
+
+  function selectStat(btn, s) {
+    selectedStat = s;
+    document.querySelectorAll('.stat-btn').forEach(function(b) { b.classList.remove('sel'); });
+    if (btn) btn.classList.add('sel');
+  }
+
+  function onCreativeInput(val) {
+    var list = document.getElementById('autocompleteList');
+    if (!val.trim()) { list.style.display = 'none'; return; }
+    var names = [...new Set(rawData.map(function(r) { return r.creative || r.campaign; }).filter(Boolean))];
+    var matches = names.filter(function(n) { return n.toLowerCase().includes(val.toLowerCase()); }).slice(0, 10);
+    if (!matches.length) { list.style.display = 'none'; return; }
+    list.innerHTML = matches.map(function(n) {
+      return '<div class="autocomplete-item" onmousedown="document.getElementById(\'creativeInput\').value=\''+escHtml(n).replace(/'/g,"\\'")+'\'">'+escHtml(n)+'</div>';
+    }).join('');
+    list.style.display = 'block';
+  }
+
+  function saveMemo() {
+    var creative = (document.getElementById('creativeInput').value || '').trim();
+    var text     = (document.getElementById('memoText').value || '').trim();
+    if (!text) { showToast('Please enter memo content'); return; }
+    var memos = loadMemos();
+    memos.unshift({ id: Date.now(), creative: creative, prio: selectedPrio, stat: selectedStat, text: text, date: new Date().toISOString().slice(0,10) });
+    saveMemos(memos);
+    document.getElementById('creativeInput').value = '';
+    document.getElementById('memoText').value = '';
+    selectPrio('medium');
+    document.querySelectorAll('.stat-btn').forEach(function(b) { b.classList.remove('sel'); });
+    selectedStat = 'reviewing';
+    updateMemoCount();
+    renderMemos();
+    showToast('Memo saved');
+  }
+
+  function deleteMemo(id) {
+    var memos = loadMemos().filter(function(m) { return m.id !== id; });
+    saveMemos(memos);
+    updateMemoCount();
+    renderMemos();
+  }
+
+  function copyMemoSlack(id) {
+    var m = loadMemos().find(function(m) { return m.id === id; });
+    if (!m) return;
+    var txt = '[' + (m.creative || '-') + '] ' + m.stat + ' | ' + m.prio + '\n' + m.text;
+    navigator.clipboard.writeText(txt).then(function() { showToast('Copied to clipboard'); }).catch(function() { showToast('Copy failed'); });
+  }
+
+  function filterMemos(f, btn) {
+    memoFilter = f;
+    document.querySelectorAll('.memo-filter-chip').forEach(function(b) { b.classList.remove('active'); });
+    if (btn) btn.classList.add('active');
+    renderMemos();
+  }
+
+  function renderMemos() {
+    var all = loadMemos();
+    var list = memoFilter === 'all' ? all : all.filter(function(m) {
+      return m.prio === memoFilter || m.stat === memoFilter;
+    });
+    var el = document.getElementById('memoCards');
+    if (!el) return;
+    if (!list.length) {
+      el.innerHTML = '<div class="memo-empty"><div class="memo-empty-icon">📋</div><div>No memos yet.</div></div>';
+      return;
+    }
+    var prioCls = { 'high': 'prio-high', 'medium': 'prio-mid', 'low': 'prio-low', 'high_kr': 'prio-high', 'medium_kr': 'prio-mid', 'low_kr': 'prio-low' };
+    el.innerHTML = list.map(function(m) {
+      var pc = prioCls[m.prio] || 'prio-mid';
+      var prioLabel = m.prio === 'high' ? 'High' : m.prio === 'low' ? 'Low' : 'Mid';
+      return '<div class="memo-card">'
+        + '<div class="memo-card-top">'
+        + (m.creative ? '<span class="memo-creative-tag">'+escHtml(m.creative)+'</span>' : '')
+        + '<span class="memo-prio-badge '+pc+'">'+prioLabel+'</span>'
+        + '<span class="memo-stat-badge">'+escHtml(m.stat||'')+'</span>'
+        + '<span class="memo-date">'+escHtml(m.date||'')+'</span>'
+        + '</div>'
+        + '<div class="memo-text">'+escHtml(m.text||'')+'</div>'
+        + '<div class="memo-actions">'
+        + '<button class="memo-action-btn" onclick="copyMemoSlack('+m.id+')">📋 Copy</button>'
+        + '<button class="memo-action-btn del" onclick="deleteMemo('+m.id+')">🗑 Delete</button>'
+        + '</div>'
+        + '</div>';
+    }).join('');
+  }
+
+  // ─── renderPanel ────────────────────────────────────────────────────────
+  function makeCreativeCard(row, rank, tab) {
+    var isVideo = row.creativeType === 'Video';
+    var typeTagClass = isVideo ? 'tag-video' : 'tag-carousel';
+    var rankClass = rank <= 3 ? ' cr-rank-'+rank : '';
+    var statusCls = (row.status||'').toLowerCase() === 'pause' ? 'cr-status-pause' : 'cr-status-live';
+    var metric = tab === 'UA' ? row.firstPurch : row.orderComp;
+    var metricLabel = tab === 'UA' ? 'FP' : 'OC';
+    var metricClass = tab === 'UA' ? 'ua' : 're';
+    return '<div class="cr-card">'
+      + '<div class="cr-card-header">'
+      + '<span class="cr-rank'+rankClass+'">RANK '+rank+'</span>'
+      + '<span class="cr-status '+statusCls+'">'+(row.status||'Live')+'</span>'
+      + '</div>'
+      + '<div class="cr-info">'
+      + '<div class="cr-name-row">'
+      + '<span class="cr-name" title="'+escHtml(row.creative||row.campaign)+'">'+escHtml(row.creative||row.campaign)+'</span>'
+      + '<span class="type-tag '+typeTagClass+'">'+escHtml(row.creativeType)+'</span>'
+      + '</div>'
+      + '<div class="cr-meta">'
+      + '<div class="cr-meta-row">⭐ <span class="cr-metric '+metricClass+'">'+metric.toLocaleString()+'</span> '+metricLabel+'</div>'
+      + '<div class="cr-meta-row">💰 Spend: '+formatSpend(row.spend)+'</div>'
+      + '<div class="cr-meta-row">📅 Launch: '+(row.prodDate||'-')+'</div>'
+      + '</div>'
+      + '</div>'
+      + '</div>';
+  }
+
+  function makeRankingTable(data, tab) {
+    var isUA = tab === 'UA';
+    var metricLabel = isUA ? 'Performance (FP)' : 'Performance (OC)';
+    var rows = data.map(function(row, i) {
+      var rank = i + 1;
+      var rankCls = rank <= 3 ? ' rt-rank-'+rank : '';
+      var isVideo = row.creativeType === 'Video';
+      var typeTagClass = isVideo ? 'tag-video' : 'tag-carousel';
+      var statusCls = (row.status||'').toLowerCase() === 'pause' ? 'cr-status-pause' : 'cr-status-live';
+      var metric = isUA ? row.firstPurch : row.orderComp;
+      var perfCls = isUA ? 'ua' : 're';
+      return '<tr>'
+        + '<td class="rt-rank'+rankCls+'">'+rank+'</td>'
+        + '<td class="rt-name" title="'+escHtml(row.creative||row.campaign)+'">'+escHtml(row.creative||row.campaign)+'</td>'
+        + '<td><span class="type-tag '+typeTagClass+'">'+escHtml(row.creativeType)+'</span></td>'
+        + '<td style="white-space:nowrap;color:var(--text-muted);font-size:12px">'+(row.prodDate||'-')+'</td>'
+        + '<td style="white-space:nowrap">'+formatSpend(row.spend)+'</td>'
+        + '<td class="rt-perf '+perfCls+'">'+metric.toLocaleString()+'</td>'
+        + '<td><span class="cr-status '+statusCls+'">'+(row.status||'Live')+'</span></td>'
+        + '</tr>';
+    }).join('');
+    return '<table class="rank-table">'
+      + '<thead><tr>'
+      + '<th style="text-align:center">Rank</th>'
+      + '<th>Creative Name</th>'
+      + '<th>Type</th>'
+      + '<th>Launch Date</th>'
+      + '<th>Spend</th>'
+      + '<th>'+metricLabel+'</th>'
+      + '<th>Status</th>'
+      + '</tr></thead>'
+      + '<tbody>'+rows+'</tbody>'
+      + '</table>';
+  }
+
+  function renderPanel(tab) {
+    var data = tab === 'UA' ? dataUA : dataRE;
+    if (!data.length) {
+      document.getElementById('stats'+tab).style.display = 'none';
+      document.getElementById('crSec'+tab).style.display = 'none';
+      document.getElementById('empty'+tab).style.display = 'block';
+      return;
+    }
+    document.getElementById('stats'+tab).style.display = '';
+    document.getElementById('crSec'+tab).style.display = '';
+    document.getElementById('empty'+tab).style.display = 'none';
+
+    var totalMetric = data.reduce(function(s,r) { return s+(tab==='UA'?r.firstPurch:r.orderComp); }, 0);
+    var totalSpend  = data.reduce(function(s,r) { return s+r.spend; }, 0);
+    var nC = data.filter(function(r) { return r.creativeType==='Carousel'; }).length;
+    var nV = data.filter(function(r) { return r.creativeType==='Video'; }).length;
+    var prefix = tab.toLowerCase();
+
+    document.getElementById(prefix+'-stat1').textContent = totalMetric.toLocaleString();
+    document.getElementById(prefix+'-stat2').textContent = formatSpend(totalSpend);
+    document.getElementById(prefix+'-stat3').textContent = data.length.toLocaleString();
+    document.getElementById(prefix+'-stat4').textContent = nC + ' / ' + nV;
+
+    var top3 = data.slice(0, 3);
+    document.getElementById('crGrid'+tab).innerHTML = top3.map(function(r,i) { return makeCreativeCard(r,i+1,tab); }).join('');
+    document.getElementById('rankTable'+tab).innerHTML = makeRankingTable(data, tab);
+    document.getElementById(tab==='UA'?'uaResultCount':'reResultCount').textContent = data.length + ' creatives';
+  }
+
+
+  // ─── Utilities ────────────────────────────────────────────────────
+  function formatSpend(n) {
+    if (!n) return '$0';
+    if (n >= 1000000) return '$' + (n/1000000).toFixed(1) + 'M';
+    if (n >= 1000) return '$' + (n/1000).toFixed(1) + 'K';
+    return '$' + n.toFixed(0);
+  }
+  function formatCPA(spend, fp) {
+    if (!fp) return '-';
+    return '$' + (spend/fp).toFixed(2);
+  }
+  function formatROAS(spend, oc) {
+    if (!spend) return '-';
+    return (oc/spend*100).toFixed(1) + '%';
+  }
+  function escHtml(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function showToast(msg, dur) {
+    var t = document.getElementById('toast');
+    if (!t) return;
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(function() { t.classList.remove('show'); }, dur || 2500);
+  }
+  function extractTitle(name) {
+    var s = String(name || '');
+    var idx = s.indexOf('_');
+    return idx > 0 ? s.slice(0, idx) : s;
+  }
+  function makeDriveUrl(title) {
+    return 'https://drive.google.com/drive/search?q=' + encodeURIComponent(title);
+  }
+
+</script>
+</body>
+</html>

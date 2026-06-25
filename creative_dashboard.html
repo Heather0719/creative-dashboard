@@ -276,8 +276,8 @@
   <div class="filter-divider"></div>
   <div class="filter-group">
     <span class="filter-label" style="font-size:14px;font-weight:700;color:#e53e3e;">Type</span>
-    <select id="creativeTypeFilter">
-      <option value="all">전체</option>
+    <select id="creativeTypeFilter" onchange="updateTypeSelectColor(this)" style="color:#e53e3e;font-weight:600">
+      <option value="all" style="color:#6b7280;font-weight:400">전체</option>
       <option value="Carousel" selected>Carousel</option>
       <option value="Video">Video</option>
     </select>
@@ -918,6 +918,11 @@
       opt.value = m; opt.textContent = `${y}년 ${parseInt(mo)}월`;
       sel.appendChild(opt);
     });
+  }
+
+  function updateTypeSelectColor(sel) {
+    sel.style.color = sel.value === 'all' ? '#6b7280' : '#e53e3e';
+    sel.style.fontWeight = sel.value === 'all' ? '400' : '600';
   }
 
   // ─── 필터 적용 ────────────────────────────────────────────────────

@@ -307,20 +307,20 @@
 
 <!-- Tabs -->
 <div class="tab-bar">
-  <button class="tab-btn active-ua" id="tabUA" onclick="switchTab('UA')">
-    🎯 UA 캠페인
+  <button class="tab-btn active-ua" id="tabTITLE" onclick="switchTab('TITLE')">
+    🏆 Title Ranking
+  </button>
+  <button class="tab-btn" id="tabUA" onclick="switchTab('UA')">
+    🎯 UA
     <span class="tab-count tab-count-ua" id="tabCountUA">0</span>
   </button>
   <button class="tab-btn" id="tabRE" onclick="switchTab('RE')">
-    🔁 RE 캠페인
+    🔁 RE
     <span class="tab-count tab-count-re" id="tabCountRE">0</span>
   </button>
   <button class="tab-btn" id="tabMEMO" onclick="switchTab('MEMO')">
     📋 Memo
     <span class="tab-count" id="tabCountMEMO" style="background:#f3f4f6;color:#6b7280">0</span>
-  </button>
-  <button class="tab-btn" id="tabTITLE" onclick="switchTab('TITLE')">
-    🏆 Title Ranking
   </button>
 </div>
 
@@ -425,9 +425,9 @@
   <div id="panelMEMO" style="display:none">
     <!-- Filter Bar -->
     <div class="memo-bar">
-      <button class="memo-filter-chip active" onclick="filterMemos('전체', this)">전체</button>
-      <button class="memo-filter-chip" onclick="filterMemos('거절', this)">❌ 거절</button>
-      <button class="memo-filter-chip" onclick="filterMemos('제한적 게재', this)">⚠️ 제한적 게재</button>
+      <button class="memo-filter-chip active" onclick="filterMemos('전체', this)">All</button>
+      <button class="memo-filter-chip" onclick="filterMemos('Rejected', this)">❌ Rejected</button>
+      <button class="memo-filter-chip" onclick="filterMemos('Limited Delivery', this)">⚠️ Limited Delivery</button>
       <button class="memo-add-btn" onclick="openMemoPopup()">➕ 새 검토/메모 등록</button>
     </div>
     <!-- Summary -->
@@ -444,8 +444,8 @@
         <div class="form-row" style="margin-bottom:0">
           <label>Status</label>
           <select id="memoStatus">
-            <option value="거절">❌ 거절</option>
-            <option value="제한적 게재">⚠️ 제한적 게재</option>
+            <option value="Rejected">❌ Rejected</option>
+            <option value="Limited Delivery">⚠️ Limited Delivery</option>
           </select>
         </div>
         <div class="form-row" style="margin-bottom:0">
@@ -1237,8 +1237,8 @@
     if (!el) return;
 
     // Summary
-    var rejectCount = all.filter(function(m){ return m.status === '거절'; }).length;
-    var limitCount  = all.filter(function(m){ return m.status === '제한적 게재'; }).length;
+    var rejectCount = all.filter(function(m){ return m.status === 'Rejected'; }).length;
+    var limitCount  = all.filter(function(m){ return m.status === 'Limited Delivery'; }).length;
     var total = rejectCount + limitCount;
     if (summary) {
       summary.textContent = total ? '🔥 최근 거절/제한된 소재가 총 ' + total + '건 있습니다. (최신순 정렬)' : '';
@@ -1261,8 +1261,8 @@
     el.innerHTML = sortedKeys.map(function(key) {
       var label = key ? '📅 ' + key.replace(/^(\d{4})-(\d{2})-(\d{2})$/, function(_,y,mo,d){ return parseInt(mo)+'월 '+parseInt(d)+'일 투입'; }) : '날짜 미입력';
       var cards = groups[key].map(function(m) {
-        var statusCls = m.status === '거절' ? 'memo-status-reject' : 'memo-status-limit';
-        var statusEmoji = m.status === '거절' ? '❌' : '⚠️';
+        var statusCls = m.status === 'Rejected' ? 'memo-status-reject' : 'memo-status-limit';
+        var statusEmoji = m.status === 'Rejected' ? '❌' : '⚠️';
         return '<div class="memo-card">'
           + '<div class="memo-card-head">'
           + '<span class="'+statusCls+'">'+statusEmoji+' '+escHtml(m.status||'')+'</span>'

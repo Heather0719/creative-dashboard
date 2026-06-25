@@ -182,55 +182,48 @@
   .toast.show { opacity: 1; transform: translateY(0); }
 
   /* Memo Tab */
-  .memo-layout { display: grid; grid-template-columns: 380px 1fr; gap: 20px; align-items: start; }
-  .memo-form-card { background: var(--card); border-radius: 12px; border: 1px solid var(--border); padding: 20px; position: sticky; top: 80px; }
-  .memo-form-card h3 { font-size: 14px; font-weight: 700; margin-bottom: 16px; color: var(--text); }
-  .form-row { margin-bottom: 14px; }
-  .form-row label { display: block; font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.4px; }
-  .form-row input[type="text"], .form-row textarea, .form-row select {
-    width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px;
-    font-size: 13px; color: var(--text); background: white; outline: none; font-family: inherit;
-  }
-  .form-row input:focus, .form-row textarea:focus, .form-row select:focus { border-color: var(--primary); }
-  .form-row textarea { resize: vertical; min-height: 90px; line-height: 1.5; }
-  .priority-btns, .status-btns { display: flex; gap: 6px; flex-wrap: wrap; }
-  .prio-btn, .stat-btn { border: 1.5px solid var(--border); background: white; border-radius: 6px; padding: 5px 12px; font-size: 12px; cursor: pointer; color: var(--text-muted); transition: all 0.15s; }
-  .prio-btn.sel-high { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
-  .prio-btn.sel-mid  { background: #fef9c3; color: #ca8a04; border-color: #fde047; }
-  .prio-btn.sel-low  { background: #dcfce7; color: #16a34a; border-color: #86efac; }
-  .stat-btn.sel      { background: var(--primary); color: white; border-color: var(--primary); }
-  .memo-save-btn { width: 100%; background: var(--primary); color: white; border: none; border-radius: 8px; padding: 10px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 4px; }
-  .memo-save-btn:hover { background: #4338ca; }
-
-  .memo-list-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-  .memo-list-header h3 { font-size: 14px; font-weight: 700; }
-  .memo-filter-row { display: flex; gap: 8px; flex-wrap: wrap; }
-  .memo-filter-chip { border: 1px solid var(--border); background: white; border-radius: 20px; padding: 4px 12px; font-size: 12px; cursor: pointer; color: var(--text-muted); }
+  .memo-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .memo-filter-chip { border: 1px solid var(--border); background: white; border-radius: 20px; padding: 5px 14px; font-size: 12px; cursor: pointer; color: var(--text-muted); }
   .memo-filter-chip.active { background: var(--primary); color: white; border-color: var(--primary); }
-  .memo-cards { display: flex; flex-direction: column; gap: 12px; }
-  .memo-card { background: var(--card); border-radius: 10px; border: 1px solid var(--border); padding: 14px 16px; transition: box-shadow 0.15s; }
-  .memo-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
-  .memo-card-top { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
-  .memo-creative-tag { background: var(--primary-light); color: var(--primary); border-radius: 6px; padding: 3px 9px; font-size: 12px; font-weight: 600; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 0; }
-  .memo-prio-badge { border-radius: 20px; padding: 2px 8px; font-size: 11px; font-weight: 600; flex-shrink: 0; }
-  .prio-high { background: #fee2e2; color: #dc2626; }
-  .prio-mid  { background: #fef9c3; color: #ca8a04; }
-  .prio-low  { background: #dcfce7; color: #16a34a; }
-  .memo-stat-badge { border-radius: 20px; padding: 2px 8px; font-size: 11px; font-weight: 600; background: var(--bg); color: var(--text-muted); }
-  .memo-date { font-size: 11px; color: var(--text-muted); margin-left: auto; white-space: nowrap; }
-  .memo-text { font-size: 13px; color: var(--text); line-height: 1.6; margin-bottom: 10px; white-space: pre-wrap; }
-  .memo-actions { display: flex; gap: 6px; justify-content: flex-end; }
-  .memo-action-btn { border: 1px solid var(--border); background: white; border-radius: 6px; padding: 4px 10px; font-size: 11px; cursor: pointer; color: var(--text-muted); transition: all 0.15s; }
+  .memo-add-btn { margin-left: auto; background: var(--primary); color: white; border: none; border-radius: 8px; padding: 7px 16px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .memo-add-btn:hover { background: #4338ca; }
+  .memo-summary { font-size: 13px; color: var(--text-muted); margin-bottom: 18px; }
+  .memo-date-group { margin-bottom: 20px; }
+  .memo-date-label { font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .memo-cards { display: flex; flex-direction: column; gap: 10px; }
+  .memo-card { background: var(--card); border-radius: 10px; border: 1px solid var(--border); padding: 14px 16px; }
+  .memo-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+  .memo-card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+  .memo-status-reject  { background: #fee2e2; color: #dc2626; border-radius: 6px; padding: 2px 9px; font-size: 12px; font-weight: 700; }
+  .memo-status-limit   { background: #fef9c3; color: #b45309; border-radius: 6px; padding: 2px 9px; font-size: 12px; font-weight: 700; }
+  .memo-channel-tag { background: var(--bg); color: var(--text-muted); border-radius: 6px; padding: 2px 8px; font-size: 11px; }
+  .memo-country-tag { font-size: 11px; color: var(--text-muted); margin-left: auto; }
+  .memo-creative-name { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .memo-review-text { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+  .memo-card-actions { display: flex; gap: 6px; justify-content: flex-end; margin-top: 8px; }
+  .memo-action-btn { border: 1px solid var(--border); background: white; border-radius: 6px; padding: 3px 10px; font-size: 11px; cursor: pointer; color: var(--text-muted); }
   .memo-action-btn:hover { background: var(--bg); }
   .memo-action-btn.del:hover { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
   .memo-empty { text-align: center; padding: 50px 20px; color: var(--text-muted); font-size: 13px; }
-  .memo-empty .memo-empty-icon { font-size: 36px; margin-bottom: 10px; }
+  /* Popup */
+  .memo-popup-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 200; display: none; align-items: center; justify-content: center; }
+  .memo-popup-overlay.open { display: flex; }
+  .memo-popup { background: white; border-radius: 14px; padding: 24px; width: 480px; max-width: 95vw; max-height: 90vh; overflow-y: auto; }
+  .memo-popup h3 { font-size: 15px; font-weight: 700; margin-bottom: 18px; }
+  .form-row { margin-bottom: 13px; }
+  .form-row label { display: block; font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; }
+  .form-row input, .form-row textarea, .form-row select { width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 13px; color: var(--text); background: white; outline: none; font-family: inherit; box-sizing: border-box; }
+  .form-row input:focus, .form-row textarea:focus, .form-row select:focus { border-color: var(--primary); }
+  .form-row textarea { resize: vertical; min-height: 70px; }
+  .form-row-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 13px; }
+  .popup-btns { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
+  .popup-cancel { border: 1px solid var(--border); background: white; border-radius: 8px; padding: 8px 18px; font-size: 13px; cursor: pointer; }
+  .popup-save { background: var(--primary); color: white; border: none; border-radius: 8px; padding: 8px 20px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .popup-save:hover { background: #4338ca; }
   .datalist-input { position: relative; }
-  #creativeInput { padding-right: 30px; }
-  .autocomplete-list { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid var(--border); border-top: none; border-radius: 0 0 8px 8px; max-height: 180px; overflow-y: auto; z-index: 50; display: none; }
+  .autocomplete-list { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid var(--border); border-top: none; border-radius: 0 0 8px 8px; max-height: 180px; overflow-y: auto; z-index: 300; display: none; }
   .autocomplete-item { padding: 7px 12px; font-size: 12px; cursor: pointer; }
   .autocomplete-item:hover { background: var(--bg); }
-  @media (max-width: 900px) { .memo-layout { grid-template-columns: 1fr; } .memo-form-card { position: static; } }
 
   @media (max-width: 900px) {
     .stats-ua, .stats-re { grid-template-columns: repeat(2, 1fr); }
@@ -430,65 +423,76 @@
 
   <!-- Memo Panel -->
   <div id="panelMEMO" style="display:none">
-    <div class="memo-layout">
+    <!-- Filter Bar -->
+    <div class="memo-bar">
+      <button class="memo-filter-chip active" onclick="filterMemos('전체', this)">전체</button>
+      <button class="memo-filter-chip" onclick="filterMemos('거절', this)">❌ 거절</button>
+      <button class="memo-filter-chip" onclick="filterMemos('제한적 게재', this)">⚠️ 제한적 게재</button>
+      <button class="memo-add-btn" onclick="openMemoPopup()">➕ 새 검토/메모 등록</button>
+    </div>
+    <!-- Summary -->
+    <div class="memo-summary" id="memoSummary"></div>
+    <!-- Cards -->
+    <div id="memoCards"></div>
+  </div>
 
-      <!-- 메모 작성 폼 -->
-      <div class="memo-form-card">
-        <h3>✏️ 새 메모 작성</h3>
-        <div class="form-row">
-          <label>소재명</label>
-          <div class="datalist-input">
-            <input type="text" id="creativeInput" placeholder="소재명 입력 또는 검색..." autocomplete="off"
-              oninput="onCreativeInput(this.value)" onblur="setTimeout(()=>document.getElementById('autocompleteList').style.display='none',150)">
-            <div class="autocomplete-list" id="autocompleteList"></div>
-          </div>
+  <!-- Memo Popup -->
+  <div class="memo-popup-overlay" id="memoPopupOverlay" onclick="if(event.target===this)closeMemoPopup()">
+    <div class="memo-popup">
+      <h3>➕ 새 검토/메모 등록</h3>
+      <div class="form-row-2col">
+        <div class="form-row" style="margin-bottom:0">
+          <label>Status</label>
+          <select id="memoStatus">
+            <option value="거절">❌ 거절</option>
+            <option value="제한적 게재">⚠️ 제한적 게재</option>
+          </select>
         </div>
-        <div class="form-row">
-          <label>우선순위</label>
-          <div class="priority-btns">
-            <button class="prio-btn" id="prioHigh" onclick="selectPrio('높음')">🔴 높음</button>
-            <button class="prio-btn" id="prioMid"  onclick="selectPrio('중간')">🟡 중간</button>
-            <button class="prio-btn" id="prioLow"  onclick="selectPrio('낮음')">🟢 낮음</button>
-          </div>
-        </div>
-        <div class="form-row">
-          <label>상태</label>
-          <div class="status-btns">
-            <button class="stat-btn" onclick="selectStat(this, '✅ 잘됨')">✅ 잘됨</button>
-            <button class="stat-btn" onclick="selectStat(this, '🔁 변형 필요')">🔁 변형 필요</button>
-            <button class="stat-btn" onclick="selectStat(this, '❌ 중단')">❌ 중단</button>
-            <button class="stat-btn" onclick="selectStat(this, '📝 검토중')">📝 검토중</button>
-          </div>
-        </div>
-        <div class="form-row">
-          <label>메모 내용</label>
-          <textarea id="memoText" placeholder="이 소재에 대한 의견, 개선 방향, 레퍼런스 등을 자유롭게 입력하세요..."></textarea>
-        </div>
-        <button class="memo-save-btn" onclick="saveMemo()">💾 메모 저장</button>
-      </div>
-
-      <!-- 메모 리스트 -->
-      <div>
-        <div class="memo-list-header">
-          <h3>📋 저장된 메모 <span id="memoCountBadge" style="font-size:12px;color:var(--text-muted);font-weight:400"></span></h3>
-          <div class="memo-filter-row">
-            <button class="memo-filter-chip active" onclick="filterMemos('전체', this)">전체</button>
-            <button class="memo-filter-chip" onclick="filterMemos('높음', this)">🔴 높음</button>
-            <button class="memo-filter-chip" onclick="filterMemos('중간', this)">🟡 중간</button>
-            <button class="memo-filter-chip" onclick="filterMemos('낮음', this)">🟢 낮음</button>
-            <button class="memo-filter-chip" onclick="filterMemos('✅ 잘됨', this)">✅ 잘됨</button>
-            <button class="memo-filter-chip" onclick="filterMemos('🔁 변형 필요', this)">🔁 변형</button>
-            <button class="memo-filter-chip" onclick="filterMemos('❌ 중단', this)">❌ 중단</button>
-          </div>
-        </div>
-        <div class="memo-cards" id="memoCards">
-          <div class="memo-empty">
-            <div class="memo-empty-icon">📋</div>
-            <div>아직 메모가 없습니다.<br>왼쪽 폼에서 첫 메모를 작성해보세요.</div>
-          </div>
+        <div class="form-row" style="margin-bottom:0">
+          <label>투입일</label>
+          <input type="date" id="memoProdDate">
         </div>
       </div>
-
+      <div class="form-row-2col">
+        <div class="form-row" style="margin-bottom:0">
+          <label>Channel</label>
+          <select id="memoChannel">
+            <option>TikTok</option>
+            <option>Meta</option>
+            <option>Google</option>
+            <option>Apple</option>
+            <option>기타</option>
+          </select>
+        </div>
+        <div class="form-row" style="margin-bottom:0">
+          <label>OS</label>
+          <select id="memoOS">
+            <option>AOS</option>
+            <option>iOS</option>
+            <option>전체</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>타겟 국가</label>
+        <input type="text" id="memoCountry" placeholder="예) WW-excUS, 영국, 독일">
+      </div>
+      <div class="form-row">
+        <label>소재명</label>
+        <div class="datalist-input">
+          <input type="text" id="creativeInput" placeholder="소재명 입력 또는 검색..." autocomplete="off"
+            oninput="onCreativeInput(this.value)" onblur="setTimeout(()=>document.getElementById('autocompleteList').style.display='none',150)">
+          <div class="autocomplete-list" id="autocompleteList"></div>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>💬 Review (사유)</label>
+        <textarea id="memoText" placeholder="심사 거절 사유, 수정 필요 항목 등 입력..."></textarea>
+      </div>
+      <div class="popup-btns">
+        <button class="popup-cancel" onclick="closeMemoPopup()">취소</button>
+        <button class="popup-save" onclick="saveMemo()">💾 저장</button>
+      </div>
     </div>
   </div>
 
@@ -1157,28 +1161,19 @@
     var n = loadMemos().length;
     var el = document.getElementById('tabCountMEMO');
     if (el) el.textContent = n;
-    var b = document.getElementById('memoCountBadge');
-    if (b) b.textContent = n ? '(' + n + ')' : '';
   }
 
-  function selectPrio(p) {
-    selectedPrio = p;
-    var map = { 'high': 'prioHigh', 'medium': 'prioMid', 'low': 'prioLow' };
-    var clsMap = { 'high': 'sel-high', 'medium': 'sel-mid', 'low': 'sel-low' };
-    // support Korean input too
-    if (p === 'high' || p === '높음') { selectedPrio = 'high'; p = 'high'; }
-    else if (p === 'low' || p === '낙음') { selectedPrio = 'low'; p = 'low'; }
-    else { selectedPrio = 'medium'; p = 'medium'; }
-    ['high','medium','low'].forEach(function(k) {
-      var el = document.getElementById(map[k]);
-      if (el) el.className = 'prio-btn' + (k === p ? ' ' + clsMap[k] : '');
-    });
+  function openMemoPopup() {
+    document.getElementById('memoPopupOverlay').classList.add('open');
+    var today = new Date().toISOString().slice(0,10);
+    document.getElementById('memoProdDate').value = today;
   }
 
-  function selectStat(btn, s) {
-    selectedStat = s;
-    document.querySelectorAll('.stat-btn').forEach(function(b) { b.classList.remove('sel'); });
-    if (btn) btn.classList.add('sel');
+  function closeMemoPopup() {
+    document.getElementById('memoPopupOverlay').classList.remove('open');
+    document.getElementById('creativeInput').value = '';
+    document.getElementById('memoText').value = '';
+    document.getElementById('memoCountry').value = '';
   }
 
   function onCreativeInput(val) {
@@ -1194,23 +1189,26 @@
   }
 
   function saveMemo() {
+    var status   = document.getElementById('memoStatus').value;
+    var channel  = document.getElementById('memoChannel').value;
+    var os       = document.getElementById('memoOS').value;
+    var country  = (document.getElementById('memoCountry').value || '').trim();
     var creative = (document.getElementById('creativeInput').value || '').trim();
     var text     = (document.getElementById('memoText').value || '').trim();
-    if (!text) { showToast('Please enter memo content'); return; }
+    var prodDate = document.getElementById('memoProdDate').value;
+    if (!creative) { showToast('소재명을 입력하세요'); return; }
+    if (!text) { showToast('Review 사유를 입력하세요'); return; }
     var memos = loadMemos();
-    memos.unshift({ id: Date.now(), creative: creative, prio: selectedPrio, stat: selectedStat, text: text, date: new Date().toISOString().slice(0,10) });
+    memos.unshift({ id: Date.now(), status: status, channel: channel, os: os, country: country, creative: creative, text: text, prodDate: prodDate, date: new Date().toISOString().slice(0,10) });
     saveMemos(memos);
-    document.getElementById('creativeInput').value = '';
-    document.getElementById('memoText').value = '';
-    selectPrio('medium');
-    document.querySelectorAll('.stat-btn').forEach(function(b) { b.classList.remove('sel'); });
-    selectedStat = 'reviewing';
+    closeMemoPopup();
     updateMemoCount();
     renderMemos();
-    showToast('Memo saved');
+    showToast('저장되었습니다');
   }
 
   function deleteMemo(id) {
+    if (!confirm('삭제하시겠습니까?')) return;
     var memos = loadMemos().filter(function(m) { return m.id !== id; });
     saveMemos(memos);
     updateMemoCount();
@@ -1220,8 +1218,8 @@
   function copyMemoSlack(id) {
     var m = loadMemos().find(function(m) { return m.id === id; });
     if (!m) return;
-    var txt = '[' + (m.creative || '-') + '] ' + m.stat + ' | ' + m.prio + '\n' + m.text;
-    navigator.clipboard.writeText(txt).then(function() { showToast('Copied to clipboard'); }).catch(function() { showToast('Copy failed'); });
+    var txt = '[' + (m.status||'') + '] ' + (m.channel||'') + ' / ' + (m.os||'') + ' | ' + (m.country||'') + '\n소재명: ' + (m.creative||'') + '\n사유: ' + (m.text||'');
+    navigator.clipboard.writeText(txt).then(function() { showToast('클립보드에 복사됨'); }).catch(function() { showToast('복사 실패'); });
   }
 
   function filterMemos(f, btn) {
@@ -1233,32 +1231,53 @@
 
   function renderMemos() {
     var all = loadMemos();
-    var list = memoFilter === 'all' ? all : all.filter(function(m) {
-      return m.prio === memoFilter || m.stat === memoFilter;
-    });
+    var list = (memoFilter === '전체') ? all : all.filter(function(m) { return m.status === memoFilter; });
     var el = document.getElementById('memoCards');
+    var summary = document.getElementById('memoSummary');
     if (!el) return;
+
+    // Summary
+    var rejectCount = all.filter(function(m){ return m.status === '거절'; }).length;
+    var limitCount  = all.filter(function(m){ return m.status === '제한적 게재'; }).length;
+    var total = rejectCount + limitCount;
+    if (summary) {
+      summary.textContent = total ? '🔥 최근 거절/제한된 소재가 총 ' + total + '건 있습니다. (최신순 정렬)' : '';
+    }
+
     if (!list.length) {
-      el.innerHTML = '<div class="memo-empty"><div class="memo-empty-icon">📋</div><div>No memos yet.</div></div>';
+      el.innerHTML = '<div class="memo-empty">📋 등록된 검토/메모가 없습니다.</div>';
       return;
     }
-    var prioCls = { 'high': 'prio-high', 'medium': 'prio-mid', 'low': 'prio-low', 'high_kr': 'prio-high', 'medium_kr': 'prio-mid', 'low_kr': 'prio-low' };
-    el.innerHTML = list.map(function(m) {
-      var pc = prioCls[m.prio] || 'prio-mid';
-      var prioLabel = m.prio === 'high' ? 'High' : m.prio === 'low' ? 'Low' : 'Mid';
-      return '<div class="memo-card">'
-        + '<div class="memo-card-top">'
-        + (m.creative ? '<span class="memo-creative-tag">'+escHtml(m.creative)+'</span>' : '')
-        + '<span class="memo-prio-badge '+pc+'">'+prioLabel+'</span>'
-        + '<span class="memo-stat-badge">'+escHtml(m.stat||'')+'</span>'
-        + '<span class="memo-date">'+escHtml(m.date||'')+'</span>'
-        + '</div>'
-        + '<div class="memo-text">'+escHtml(m.text||'')+'</div>'
-        + '<div class="memo-actions">'
-        + '<button class="memo-action-btn" onclick="copyMemoSlack('+m.id+')">📋 Copy</button>'
-        + '<button class="memo-action-btn del" onclick="deleteMemo('+m.id+')">🗑 Delete</button>'
-        + '</div>'
-        + '</div>';
+
+    // Group by prodDate
+    var groups = {};
+    list.forEach(function(m) {
+      var key = m.prodDate || m.date || '';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(m);
+    });
+    var sortedKeys = Object.keys(groups).sort(function(a,b){ return b.localeCompare(a); });
+
+    el.innerHTML = sortedKeys.map(function(key) {
+      var label = key ? '📅 ' + key.replace(/^(\d{4})-(\d{2})-(\d{2})$/, function(_,y,mo,d){ return parseInt(mo)+'월 '+parseInt(d)+'일 투입'; }) : '날짜 미입력';
+      var cards = groups[key].map(function(m) {
+        var statusCls = m.status === '거절' ? 'memo-status-reject' : 'memo-status-limit';
+        var statusEmoji = m.status === '거절' ? '❌' : '⚠️';
+        return '<div class="memo-card">'
+          + '<div class="memo-card-head">'
+          + '<span class="'+statusCls+'">'+statusEmoji+' '+escHtml(m.status||'')+'</span>'
+          + '<span class="memo-channel-tag">'+escHtml(m.channel||'')+' / '+escHtml(m.os||'')+'</span>'
+          + (m.country ? '<span class="memo-country-tag">타겟: '+escHtml(m.country)+'</span>' : '')
+          + '</div>'
+          + '<div class="memo-creative-name">'+escHtml(m.creative||'')+'</div>'
+          + '<div class="memo-review-text">💬 '+escHtml(m.text||'')+'</div>'
+          + '<div class="memo-card-actions">'
+          + '<button class="memo-action-btn" onclick="copyMemoSlack('+m.id+')">📋 Copy</button>'
+          + '<button class="memo-action-btn del" onclick="deleteMemo('+m.id+')">🗑 삭제</button>'
+          + '</div>'
+          + '</div>';
+      }).join('');
+      return '<div class="memo-date-group"><div class="memo-date-label">'+label+'</div><div class="memo-cards">'+cards+'</div></div>';
     }).join('');
   }
 

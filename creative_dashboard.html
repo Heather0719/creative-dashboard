@@ -620,7 +620,6 @@
   // ─── data.js 자동 로드 + 초기화 ──────────────────────────────────
   window.addEventListener('DOMContentLoaded', () => {
     updateMemoCount();
-    selectPrio('중간');
     if (window.DASHBOARD_DATA && window.DASHBOARD_DATA.rows) {
       const d = window.DASHBOARD_DATA;
       rawData = expandKeys(d);

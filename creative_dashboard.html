@@ -873,11 +873,13 @@
     e.stopPropagation();
     document.getElementById('chDropdown').classList.toggle('open');
   }
-  document.addEventListener('click', function() {
+  document.addEventListener('click', function(e) {
     var cd = document.getElementById('chDropdown');
     var wd = document.getElementById('wkDropdown');
-    if (cd) cd.classList.remove('open');
-    if (wd) wd.classList.remove('open');
+    var wm = document.getElementById('wkMulti');
+    var chm = document.getElementById('chMulti');
+    if (wd && wm && !wm.contains(e.target)) wd.classList.remove('open');
+    if (cd && chm && !chm.contains(e.target)) cd.classList.remove('open');
   });
 
   function onChAllChange(cb) {

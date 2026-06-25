@@ -257,10 +257,9 @@
 <div class="filter-bar" id="filterBar">
   <div class="filter-group">
     <span class="filter-label">Period</span>
-    <button class="quick-btn" id="quickToday" onclick="setQuickDate('today', this)">Today</button>
-    <div class="wk-multi" id="wkMulti">
-      <button class="ch-toggle" id="wkToggleBtn" onclick="toggleWkDropdown(event)">Week</button>
-      <div class="ch-dropdown" id="wkDropdown">
+    <div class="wk-multi" id="wkMulti" style="position:relative">
+      <button class="ch-toggle" id="wkToggleBtn" onclick="toggleWkDropdown(event)" style="min-width:120px">Week ▾</button>
+      <div class="ch-dropdown" id="wkDropdown" style="z-index:500">
         <label class="ch-item ch-item-all">
           <input type="checkbox" id="wkAll" onchange="onWkAllChange(this)"> All
         </label>

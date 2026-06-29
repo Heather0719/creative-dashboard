@@ -1121,6 +1121,7 @@
     var dateFrom = document.getElementById('dateFrom').value;
     var dateTo   = document.getElementById('dateTo').value;
     var selCh    = getSelectedChannels();
+    var ctype    = document.getElementById('creativeTypeFilter').value;
     function inRange(d) {
       if (weekRanges) return weekRanges.some(function(w) { return d >= w[0] && d <= w[1]; });
       if (dateFrom && d < dateFrom) return false;
@@ -1131,6 +1132,7 @@
     rawData.forEach(function(r) {
       if (!inRange(r.date)) return;
       if (selCh && !selCh.has(r.channel)) return;
+      if (ctype !== 'all' && !(r.creativeType || '').toLowerCase().includes(ctype.toLowerCase())) return;
       var title = extractTitle(r.creative || r.campaign);
       if (r.campType === 'UA') {
         if (!uaMap[title]) uaMap[title] = { spend: 0, fp: 0 };
@@ -1140,17 +1142,17 @@
         reMap[title].spend += r.spend; reMap[title].oc += r.orderComp;
       }
     });
-    function makeRows(map, valKey, cls, fmt) {
-      var sorted = Object.entries(map).sort(function(a,b) { return b[1][valKey] - a[1][valKey]; }).slice(0, 20);
+    function makeRows(map, valKey, cls, fmt, limit) {
+      var sorted = Object.entries(map).sort(function(a,b) { return b[1][valKey] - a[1][valKey]; }).slice(0, limit);
       if (!sorted.length) return '<tr><td colspan="3" style="padding:20px;text-align:center;color:var(--text-muted)">No data</td></tr>';
       return sorted.map(function(kv, i) {
         return '<tr><td class="title-num">'+(i+1)+'</td><td class="title-name" title="'+escHtml(kv[0])+'">'+escHtml(kv[0])+'</td><td class="title-val '+cls+'">'+fmt(kv[1][valKey])+'</td></tr>';
       }).join('');
     }
-    document.getElementById('titleUACost').innerHTML = makeRows(uaMap,'spend','val-spend',formatSpend);
-    document.getElementById('titleUAFP').innerHTML   = makeRows(uaMap,'fp','val-ua',function(n) { return n.toLocaleString()+' users'; });
-    document.getElementById('titleRECost').innerHTML = makeRows(reMap,'spend','val-spend',formatSpend);
-    document.getElementById('titleREOC').innerHTML   = makeRows(reMap,'oc','val-re',function(n) { return n.toLocaleString()+' users'; });
+    document.getElementById('titleUACost').innerHTML = makeRows(uaMap,'spend','val-spend',formatSpend, 10);
+    document.getElementById('titleUAFP').innerHTML   = makeRows(uaMap,'fp','val-ua',function(n) { return n.toLocaleString()+' users'; }, 10);
+    document.getElementById('titleRECost').innerHTML = makeRows(reMap,'spend','val-spend',formatSpend, 15);
+    document.getElementById('titleREOC').innerHTML   = makeRows(reMap,'oc','val-re',function(n) { return n.toLocaleString()+' users'; }, 15);
   }
 
   // ─── Memo ──────────────────────────────────────────────────────────

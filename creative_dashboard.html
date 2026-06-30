@@ -139,6 +139,7 @@
   .cr-status { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
   .cr-status-live { background: #dcfce7; color: #15803d; }
   .cr-status-pause { background: #f3f4f6; color: #6b7280; }
+  .cr-status-off { background: #fee2e2; color: #dc2626; }
   .cr-info { padding: 12px 14px 14px; }
   .cr-name-row { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
   .cr-name { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
@@ -557,6 +558,32 @@
 
 <script>
   let rawData = [];
+  let recentActiveSet = new Set(); // 최근 주간 spend>0인 소재 key
+
+  function computeRecentActiveSet() {
+    if (!rawData.length) return;
+    // rawData 전체 기준 최신 날짜 찾기
+    var maxDate = rawData.reduce(function(m, r) { return r.date > m ? r.date : m; }, '');
+    if (!maxDate) return;
+    // 최신 날짜 기준 최근 7일 시작일
+    var d = new Date(maxDate);
+    d.setDate(d.getDate() - 6);
+    var weekStart = d.toISOString().slice(0, 10);
+    recentActiveSet = new Set();
+    rawData.forEach(function(r) {
+      if (r.date >= weekStart && r.date <= maxDate && r.spend > 0) {
+        recentActiveSet.add(r.creative || r.campaign);
+      }
+    });
+  }
+
+  function getEffectiveStatus(row) {
+    var key = row.creative || row.campaign;
+    if (!recentActiveSet.has(key)) return 'OFF';
+    var s = (row.status || '').toLowerCase();
+    if (s === 'pause') return 'Pause';
+    return 'Live';
+  }
   let dataUA = [], dataRE = [];
   let sortUA = 'metric', sortRE = 'metric';
   let activeTab = 'UA';
@@ -622,6 +649,7 @@
     if (window.DASHBOARD_DATA && window.DASHBOARD_DATA.rows) {
       const d = window.DASHBOARD_DATA;
       rawData = expandKeys(d);
+      computeRecentActiveSet();
       document.getElementById('lastUpdated').textContent =
         `자동 로드 · ${d.source} · ${d.updatedAt}`;
       document.getElementById('uploadFilename').textContent = `${d.source} · ${d.count.toLocaleString()}행 (자동 로드)`;
@@ -652,6 +680,7 @@
         }
         rawData = mode === 'HT' ? normalizeHT(json) : normalizeData(json);
         if (rawData.length === 0) { showToast('⚠️ 데이터가 없습니다. 컬럼명을 확인해주세요.', 4000); return; }
+        computeRecentActiveSet();
         document.getElementById('lastUpdated').textContent = '업데이트: ' + new Date().toLocaleString('ko-KR');
         document.getElementById('uploadFilename').textContent = `${file.name} · ${rawData.length.toLocaleString()}행`;
         populateChannelFilter();
@@ -1103,7 +1132,7 @@
       btn.className = 'tab-btn' + (t === tab ? (t === 'RE' ? ' active-re' : ' active-ua') : '');
     });
     document.getElementById('filterBar').style.display = tab === 'MEMO' ? 'none' : '';
-    if (tab === 'MEMO')  renderMemos();
+    if (tab === 'MEMO')  fetchMemos(renderMemos);
     if (tab === 'TITLE') renderTitleRank();
   }
 
@@ -1156,16 +1185,25 @@
   }
 
   // ─── Memo ──────────────────────────────────────────────────────────
-  var MEMO_KEY = 'creative_dashboard_memos';
+  var SHEET_URL = 'https://script.google.com/macros/s/AKfycbzhQp5P3qC5Xn133MevAMua5V7F1ji97E8EQ4qGYVwYRHGCisKqtSQGMObCodzhU3pX/exec';
+  var memosCache = [];
   var selectedPrio = 'medium';
   var selectedStat = 'reviewing';
   var memoFilter   = 'all';
 
-  function loadMemos() { try { return JSON.parse(localStorage.getItem(MEMO_KEY) || '[]'); } catch(e) { return []; } }
-  function saveMemos(list) { localStorage.setItem(MEMO_KEY, JSON.stringify(list)); }
+  function fetchMemos(callback) {
+    fetch(SHEET_URL)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        memosCache = Array.isArray(data) ? data.reverse() : [];
+        updateMemoCount();
+        if (callback) callback();
+      })
+      .catch(function() { showToast('메모 불러오기 실패'); });
+  }
 
   function updateMemoCount() {
-    var n = loadMemos().length;
+    var n = memosCache.length;
     var el = document.getElementById('tabCountMEMO');
     if (el) el.textContent = n;
   }
@@ -1205,25 +1243,32 @@
     var prodDate = document.getElementById('memoProdDate').value;
     if (!creative) { showToast('소재명을 입력하세요'); return; }
     if (!text) { showToast('Review 사유를 입력하세요'); return; }
-    var memos = loadMemos();
-    memos.unshift({ id: Date.now(), status: status, channel: channel, os: os, country: country, creative: creative, text: text, prodDate: prodDate, date: new Date().toISOString().slice(0,10) });
-    saveMemos(memos);
+    var memo = { id: Date.now(), status: status, channel: channel, os: os, country: country, creative: creative, text: text, prodDate: prodDate, date: new Date().toISOString().slice(0,10) };
     closeMemoPopup();
-    updateMemoCount();
-    renderMemos();
-    showToast('저장되었습니다');
+    showToast('저장 중...');
+    fetch(SHEET_URL, { method: 'POST', body: JSON.stringify(memo) })
+      .then(function() {
+        memosCache.unshift(memo);
+        updateMemoCount();
+        renderMemos();
+        showToast('저장되었습니다');
+      })
+      .catch(function() { showToast('저장 실패'); });
   }
 
   function deleteMemo(id) {
     if (!confirm('삭제하시겠습니까?')) return;
-    var memos = loadMemos().filter(function(m) { return m.id !== id; });
-    saveMemos(memos);
-    updateMemoCount();
-    renderMemos();
+    fetch(SHEET_URL, { method: 'POST', body: JSON.stringify({ action: 'delete', id: id }) })
+      .then(function() {
+        memosCache = memosCache.filter(function(m) { return String(m.id) !== String(id); });
+        updateMemoCount();
+        renderMemos();
+      })
+      .catch(function() { showToast('삭제 실패'); });
   }
 
   function copyMemoSlack(id) {
-    var m = loadMemos().find(function(m) { return m.id === id; });
+    var m = memosCache.find(function(m) { return String(m.id) === String(id); });
     if (!m) return;
     var txt = '[' + (m.status||'') + '] ' + (m.channel||'') + ' / ' + (m.os||'') + ' | ' + (m.country||'') + '\n소재명: ' + (m.creative||'') + '\n사유: ' + (m.text||'');
     navigator.clipboard.writeText(txt).then(function() { showToast('클립보드에 복사됨'); }).catch(function() { showToast('복사 실패'); });
@@ -1237,7 +1282,7 @@
   }
 
   function renderMemos() {
-    var all = loadMemos();
+    var all = memosCache;
     var list = (memoFilter === '전체') ? all : all.filter(function(m) { return m.status === memoFilter; });
     var el = document.getElementById('memoCards');
     var summary = document.getElementById('memoSummary');
@@ -1293,14 +1338,15 @@
     var isVideo = row.creativeType === 'Video';
     var typeTagClass = isVideo ? 'tag-video' : 'tag-carousel';
     var rankClass = rank <= 3 ? ' cr-rank-'+rank : '';
-    var statusCls = (row.status||'').toLowerCase() === 'pause' ? 'cr-status-pause' : 'cr-status-live';
+    var effStatus = getEffectiveStatus(row);
+    var statusCls = effStatus === 'OFF' ? 'cr-status-off' : effStatus === 'Pause' ? 'cr-status-pause' : 'cr-status-live';
     var metric = tab === 'UA' ? row.firstPurch : row.orderComp;
     var metricLabel = tab === 'UA' ? 'FP' : 'OC';
     var metricClass = tab === 'UA' ? 'ua' : 're';
     return '<div class="cr-card">'
       + '<div class="cr-card-header">'
       + '<span class="cr-rank'+rankClass+'">RANK '+rank+'</span>'
-      + '<span class="cr-status '+statusCls+'">'+(row.status||'Live')+'</span>'
+      + '<span class="cr-status '+statusCls+'">'+effStatus+'</span>'
       + '</div>'
       + '<div class="cr-info">'
       + '<div class="cr-name-row">'
@@ -1324,7 +1370,8 @@
       var rankCls = rank <= 3 ? ' rt-rank-'+rank : '';
       var isVideo = row.creativeType === 'Video';
       var typeTagClass = isVideo ? 'tag-video' : 'tag-carousel';
-      var statusCls = (row.status||'').toLowerCase() === 'pause' ? 'cr-status-pause' : 'cr-status-live';
+      var effStatus = getEffectiveStatus(row);
+      var statusCls = effStatus === 'OFF' ? 'cr-status-off' : effStatus === 'Pause' ? 'cr-status-pause' : 'cr-status-live';
       var metric = isUA ? row.firstPurch : row.orderComp;
       var perfCls = isUA ? 'ua' : 're';
       return '<tr>'
@@ -1334,7 +1381,7 @@
         + '<td style="white-space:nowrap;color:var(--text-muted);font-size:12px">'+(row.prodDate||'-')+'</td>'
         + '<td style="white-space:nowrap">'+formatSpend(row.spend)+'</td>'
         + '<td class="rt-perf '+perfCls+'">'+metric.toLocaleString()+'</td>'
-        + '<td><span class="cr-status '+statusCls+'">'+(row.status||'Live')+'</span></td>'
+        + '<td><span class="cr-status '+statusCls+'">'+effStatus+'</span></td>'
         + '</tr>';
     }).join('');
     return '<table class="rank-table">'

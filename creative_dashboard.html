@@ -142,7 +142,8 @@
   .cr-status-off { background: #fee2e2; color: #dc2626; }
   .cr-info { padding: 12px 14px 14px; }
   .cr-name-row { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
-  .cr-name { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  .cr-name { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; color: var(--text); text-decoration: none; cursor: pointer; }
+  .cr-name:hover { color: var(--primary); text-decoration: underline; }
   .type-tag { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; flex-shrink: 0; }
   .tag-carousel { background: #dbeafe; color: #1d4ed8; }
   .tag-video { background: #ede9fe; color: #6d28d9; }
@@ -167,6 +168,8 @@
   .rt-rank-2 { color: var(--silver); }
   .rt-rank-3 { color: var(--bronze); }
   .rt-name { font-weight: 500; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rt-name a { color: inherit; text-decoration: none; }
+  .rt-name a:hover { color: var(--primary); text-decoration: underline; }
   .rt-perf { font-weight: 700; }
   .rt-perf.ua { color: var(--ua-color); }
   .rt-perf.re { color: var(--re-color); }
@@ -1350,7 +1353,7 @@
       + '</div>'
       + '<div class="cr-info">'
       + '<div class="cr-name-row">'
-      + '<span class="cr-name" title="'+escHtml(row.creative||row.campaign)+'">'+escHtml(row.creative||row.campaign)+'</span>'
+      + '<a class="cr-name" href="'+escHtml(getDriveUrl(row))+'" target="_blank" rel="noopener" title="'+escHtml(row.creative||row.campaign)+' — 드라이브에서 열기">'+escHtml(row.creative||row.campaign)+'</a>'
       + '<span class="type-tag '+typeTagClass+'">'+escHtml(row.creativeType)+'</span>'
       + '</div>'
       + '<div class="cr-meta">'
@@ -1376,7 +1379,7 @@
       var perfCls = isUA ? 'ua' : 're';
       return '<tr>'
         + '<td class="rt-rank'+rankCls+'">'+rank+'</td>'
-        + '<td class="rt-name" title="'+escHtml(row.creative||row.campaign)+'">'+escHtml(row.creative||row.campaign)+'</td>'
+        + '<td class="rt-name"><a href="'+escHtml(getDriveUrl(row))+'" target="_blank" rel="noopener" title="'+escHtml(row.creative||row.campaign)+' — 드라이브에서 열기">'+escHtml(row.creative||row.campaign)+'</a></td>'
         + '<td><span class="type-tag '+typeTagClass+'">'+escHtml(row.creativeType)+'</span></td>'
         + '<td style="white-space:nowrap;color:var(--text-muted);font-size:12px">'+(row.prodDate||'-')+'</td>'
         + '<td style="white-space:nowrap">'+formatSpend(row.spend)+'</td>'
@@ -1459,6 +1462,22 @@
   }
   function makeDriveUrl(title) {
     return 'https://drive.google.com/drive/search?q=' + encodeURIComponent(title);
+  }
+
+  // ─── Creative Name → 구글드라이브 폴더 매핑 ─────────────────────────
+  // 소재명(전체, 대소문자 구분) 그대로 키로 사용합니다.
+  // 매핑에 없는 소재는 작품명(제목) 기준 드라이브 검색 링크로 대체됩니다.
+  // 새 소재 추가 시 아래에 "소재명 전체": "폴더 URL" 형태로 한 줄만 추가하면 됩니다.
+  var DRIVE_LINKS = {
+    'HeMightBite_Video_1080x1920_G_HS_260424': 'https://drive.google.com/drive/u/0/folders/19IZtG6CZLqRTDQ1Wea3gJcXQgpfWJJEx',
+    'ReleaseYourPersona_Video_1080x1920_A_TS_260610': 'https://drive.google.com/drive/u/0/folders/1oRtPFl40xLFoOBsSI3ltv6-DJznKzTW0',
+    'HeMightBite_Carousel_1080x1080_B_260211': 'https://drive.google.com/drive/u/0/folders/1GSHhgO1Ax9V35Heh0DaLicJ3Fbu8aKq7',
+    'WhatifIMarriedMyEnemy_Carousel_1080x1080_C_260630': 'https://drive.google.com/drive/u/0/folders/1WF7aUVyrkuJCRA7o8azZ3Hani5h9ARtS',
+  };
+  function getDriveUrl(row) {
+    var name = row.creative || row.campaign || '';
+    if (DRIVE_LINKS[name]) return DRIVE_LINKS[name];
+    return makeDriveUrl(extractTitle(name));
   }
 
 </script>

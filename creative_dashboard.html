@@ -189,20 +189,19 @@
   .memo-add-btn { margin-left: auto; background: var(--primary); color: white; border: none; border-radius: 8px; padding: 7px 16px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
   .memo-add-btn:hover { background: #4338ca; }
   .memo-summary { font-size: 13px; color: var(--text-muted); margin-bottom: 18px; }
-  .memo-date-group { margin-bottom: 20px; }
-  .memo-date-label { font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
-  .memo-cards { display: flex; flex-direction: column; gap: 10px; }
-  .memo-card { background: var(--card); border-radius: 10px; border: 1px solid var(--border); padding: 14px 16px; }
+  .memo-date-group { margin-bottom: 14px; }
+  .memo-cards { display: flex; flex-direction: column; gap: 8px; }
+  .memo-card { background: var(--card); border-radius: 10px; border: 1px solid var(--border); padding: 10px 14px; }
   .memo-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
-  .memo-card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+  .memo-card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
   .memo-status-reject  { background: #fee2e2; color: #dc2626; border-radius: 6px; padding: 2px 9px; font-size: 12px; font-weight: 700; }
   .memo-status-limit   { background: #fef9c3; color: #b45309; border-radius: 6px; padding: 2px 9px; font-size: 12px; font-weight: 700; }
   .memo-channel-tag { background: var(--bg); color: var(--text-muted); border-radius: 6px; padding: 2px 8px; font-size: 11px; }
   .memo-date-tag { background: #eef2ff; color: #4f46e5; border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 600; }
   .memo-country-tag { font-size: 11px; color: var(--text-muted); margin-left: auto; }
-  .memo-creative-name { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
-  .memo-review-text { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
-  .memo-card-actions { display: flex; gap: 6px; justify-content: flex-end; margin-top: 8px; }
+  .memo-creative-name { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+  .memo-review-text { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
+  .memo-card-actions { display: flex; gap: 6px; justify-content: flex-end; margin-top: 4px; }
   .memo-action-btn { border: 1px solid var(--border); background: white; border-radius: 6px; padding: 3px 10px; font-size: 11px; cursor: pointer; color: var(--text-muted); }
   .memo-action-btn:hover { background: var(--bg); }
   .memo-action-btn.del:hover { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
@@ -1338,7 +1337,6 @@
     var sortedKeys = Object.keys(groups).sort(function(a,b){ return b.localeCompare(a); });
 
     el.innerHTML = sortedKeys.map(function(key) {
-      var label = key ? '📅 ' + key.replace(/^(\d{4})-(\d{2})-(\d{2})$/, function(_,y,mo,d){ return parseInt(mo)+'월 '+parseInt(d)+'일 투입'; }) : '날짜 미입력';
       var cards = groups[key].map(function(m) {
         var statusCls = String(m.status||'').toLowerCase() === 'rejected' ? 'memo-status-reject' : 'memo-status-limit';
         var statusEmoji = String(m.status||'').toLowerCase() === 'rejected' ? '❌' : '⚠️';
@@ -1357,7 +1355,7 @@
           + '</div>'
           + '</div>';
       }).join('');
-      return '<div class="memo-date-group"><div class="memo-date-label">'+label+'</div><div class="memo-cards">'+cards+'</div></div>';
+      return '<div class="memo-date-group"><div class="memo-cards">'+cards+'</div></div>';
     }).join('');
   }
 

@@ -189,19 +189,19 @@
   .memo-add-btn { margin-left: auto; background: var(--primary); color: white; border: none; border-radius: 8px; padding: 7px 16px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
   .memo-add-btn:hover { background: #4338ca; }
   .memo-summary { font-size: 13px; color: var(--text-muted); margin-bottom: 18px; }
-  .memo-date-group { margin-bottom: 20px; }
-  .memo-date-label { font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
-  .memo-cards { display: flex; flex-direction: column; gap: 10px; }
-  .memo-card { background: var(--card); border-radius: 10px; border: 1px solid var(--border); padding: 14px 16px; }
+  .memo-date-group { margin-bottom: 14px; }
+  .memo-cards { display: flex; flex-direction: column; gap: 8px; }
+  .memo-card { background: var(--card); border-radius: 10px; border: 1px solid var(--border); padding: 10px 14px; }
   .memo-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
-  .memo-card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+  .memo-card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
   .memo-status-reject  { background: #fee2e2; color: #dc2626; border-radius: 6px; padding: 2px 9px; font-size: 12px; font-weight: 700; }
   .memo-status-limit   { background: #fef9c3; color: #b45309; border-radius: 6px; padding: 2px 9px; font-size: 12px; font-weight: 700; }
   .memo-channel-tag { background: var(--bg); color: var(--text-muted); border-radius: 6px; padding: 2px 8px; font-size: 11px; }
+  .memo-date-tag { background: #eef2ff; color: #4f46e5; border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 600; }
   .memo-country-tag { font-size: 11px; color: var(--text-muted); margin-left: auto; }
-  .memo-creative-name { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
-  .memo-review-text { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
-  .memo-card-actions { display: flex; gap: 6px; justify-content: flex-end; margin-top: 8px; }
+  .memo-creative-name { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+  .memo-review-text { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
+  .memo-card-actions { display: flex; gap: 6px; justify-content: flex-end; margin-top: 4px; }
   .memo-action-btn { border: 1px solid var(--border); background: white; border-radius: 6px; padding: 3px 10px; font-size: 11px; cursor: pointer; color: var(--text-muted); }
   .memo-action-btn:hover { background: var(--bg); }
   .memo-action-btn.del:hover { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
@@ -1277,6 +1277,35 @@
     renderMemos();
   }
 
+  // 시트의 'id' 칼럼에 prodDate/date 대신 날짜가 들어있는 경우를 위한 보정.
+  // 시트에서 '날짜' 형식 셀로 입력하면 Apps Script가 UTC ISO 문자열(예: "2026-06-09T15:00:00.000Z")로 내려주고,
+  // 수기로 텍스트만 입력하면 "6/10" 같은 M/D 형식으로 내려온다. 메모 팝업에서 자동 생성되는 id(Date.now() 숫자)는 날짜로 취급하지 않는다.
+  function parseShortDate(v) {
+    if (v === null || v === undefined || v === '') return '';
+    if (typeof v === 'number') return ''; // Date.now() 타임스탬프 (자동 생성 메모 id)
+    var s = String(v).trim();
+    if (/^\d+$/.test(s)) return ''; // 숫자만 있는 문자열도 타임스탬프로 간주
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    // ISO datetime (UTC) → KST(UTC+9) 보정 후 날짜만 추출
+    if (/^\d{4}-\d{2}-\d{2}T/.test(s)) {
+      var dt = new Date(s);
+      if (!isNaN(dt.getTime())) {
+        var kst = new Date(dt.getTime() + 9 * 60 * 60 * 1000);
+        return kst.getUTCFullYear() + '-' + String(kst.getUTCMonth() + 1).padStart(2, '0') + '-' + String(kst.getUTCDate()).padStart(2, '0');
+      }
+    }
+    // 수기 입력된 M/D 형식
+    var m = s.match(/^(\d{1,2})\/(\d{1,2})$/);
+    if (!m) return '';
+    var mo = parseInt(m[1], 10), da = parseInt(m[2], 10);
+    if (mo < 1 || mo > 12 || da < 1 || da > 31) return '';
+    var now = new Date();
+    var year = now.getFullYear();
+    var guess = new Date(year, mo - 1, da);
+    if (guess - now > 90 * 24 * 60 * 60 * 1000) year -= 1; // 미래로 90일 이상 벗어나면 작년으로 보정
+    return year + '-' + String(mo).padStart(2, '0') + '-' + String(da).padStart(2, '0');
+  }
+
   function renderMemos() {
     var all = memosCache;
     var list = all;
@@ -1285,8 +1314,8 @@
     if (!el) return;
 
     // Summary
-    var rejectCount = all.filter(function(m){ return m.status === 'Rejected'; }).length;
-    var limitCount  = all.filter(function(m){ return m.status === 'Limited Delivery'; }).length;
+    var rejectCount = all.filter(function(m){ return String(m.status||'').toLowerCase() === 'rejected'; }).length;
+    var limitCount  = all.filter(function(m){ return String(m.status||'').toLowerCase() === 'limited delivery'; }).length;
     var total = rejectCount + limitCount;
     if (summary) {
       summary.textContent = total ? '🔥 최근 거절/제한된 소재가 총 ' + total + '건 있습니다. (최신순 정렬)' : '';
@@ -1297,24 +1326,25 @@
       return;
     }
 
-    // Group by prodDate
+    // Group by prodDate (없으면 date, 그마저 없으면 id 칼럼에 잘못 들어간 날짜를 사용)
     var groups = {};
     list.forEach(function(m) {
-      var key = m.prodDate || m.date || '';
+      m._displayDate = m.prodDate || m.date || parseShortDate(m.id) || '';
+      var key = m._displayDate;
       if (!groups[key]) groups[key] = [];
       groups[key].push(m);
     });
     var sortedKeys = Object.keys(groups).sort(function(a,b){ return b.localeCompare(a); });
 
     el.innerHTML = sortedKeys.map(function(key) {
-      var label = key ? '📅 ' + key.replace(/^(\d{4})-(\d{2})-(\d{2})$/, function(_,y,mo,d){ return parseInt(mo)+'월 '+parseInt(d)+'일 투입'; }) : '날짜 미입력';
       var cards = groups[key].map(function(m) {
-        var statusCls = m.status === 'Rejected' ? 'memo-status-reject' : 'memo-status-limit';
-        var statusEmoji = m.status === 'Rejected' ? '❌' : '⚠️';
+        var statusCls = String(m.status||'').toLowerCase() === 'rejected' ? 'memo-status-reject' : 'memo-status-limit';
+        var statusEmoji = String(m.status||'').toLowerCase() === 'rejected' ? '❌' : '⚠️';
         return '<div class="memo-card">'
           + '<div class="memo-card-head">'
           + '<span class="'+statusCls+'">'+statusEmoji+' '+escHtml(m.status||'')+'</span>'
           + '<span class="memo-channel-tag">'+escHtml(m.channel||'')+' / '+escHtml(m.os||'')+'</span>'
+          + (m._displayDate ? '<span class="memo-date-tag">📅 '+escHtml(m._displayDate)+'</span>' : '')
           + (m.country ? '<span class="memo-country-tag">타겟: '+escHtml(m.country)+'</span>' : '')
           + '</div>'
           + '<div class="memo-creative-name">'+escHtml(m.creative||'')+'</div>'
@@ -1325,7 +1355,7 @@
           + '</div>'
           + '</div>';
       }).join('');
-      return '<div class="memo-date-group"><div class="memo-date-label">'+label+'</div><div class="memo-cards">'+cards+'</div></div>';
+      return '<div class="memo-date-group"><div class="memo-cards">'+cards+'</div></div>';
     }).join('');
   }
 

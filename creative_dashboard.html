@@ -556,6 +556,26 @@
   let rawData = [];
   let recentActiveSet = new Set(); // 최근 주간 spend>0인 소재 key
 
+  // ─── spend가 전혀 수집되지 않는 채널 제거 ──────────────────────────
+  // 예: reddit(레거시 중복 키), snap — 전 기간 spend가 0이라 소재 랭킹에 노이즈만 남긴다.
+  // 채널명을 하드코딩하지 않고, 전체 기간 spend 합이 0인 채널을 동적으로 판정한다.
+  var _droppedChannels = [];
+  function stripZeroSpendChannels() {
+    var bySpend = {};
+    rawData.forEach(function(r) {
+      var ch = r.channel || '';
+      bySpend[ch] = (bySpend[ch] || 0) + (r.spend || 0);
+    });
+    var dead = Object.keys(bySpend).filter(function(ch) { return ch && bySpend[ch] === 0; });
+    if (!dead.length) { _droppedChannels = []; return; }
+    var deadSet = new Set(dead);
+    var before = rawData.length;
+    rawData = rawData.filter(function(r) { return !deadSet.has(r.channel); });
+    _droppedChannels = dead;
+    console.log('[dashboard] spend 미수집 채널 제외:', dead.join(', '),
+                '(' + (before - rawData.length) + '행 제거)');
+  }
+
   function computeRecentActiveSet() {
     if (!rawData.length) return;
     // rawData 전체 기준 최신 날짜 찾기
@@ -645,6 +665,7 @@
     if (window.DASHBOARD_DATA && window.DASHBOARD_DATA.rows) {
       const d = window.DASHBOARD_DATA;
       rawData = expandKeys(d);
+      stripZeroSpendChannels();
       computeRecentActiveSet();
       document.getElementById('lastUpdated').textContent =
         `자동 로드 · ${d.source} · ${d.updatedAt}`;
@@ -676,6 +697,7 @@
         }
         rawData = mode === 'HT' ? normalizeHT(json) : normalizeData(json);
         if (rawData.length === 0) { showToast('⚠️ 데이터가 없습니다. 컬럼명을 확인해주세요.', 4000); return; }
+        stripZeroSpendChannels();
         computeRecentActiveSet();
         document.getElementById('lastUpdated').textContent = '업데이트: ' + new Date().toLocaleString('ko-KR');
         document.getElementById('uploadFilename').textContent = `${file.name} · ${rawData.length.toLocaleString()}행`;
@@ -983,7 +1005,12 @@
         if (r.prodDate) map[key].prodDate = map[key].prodDate || r.prodDate;
         if (r.thumbUrl) map[key].thumbUrl = r.thumbUrl;
       });
-      return Object.values(map);
+      // 완전히 비어 있는 소재만 랭킹에서 제외한다.
+      // spend가 0이어도 FP(UA) 또는 OC(RE) 실적이 있으면 유효한 성과이므로 남긴다.
+      // (비용 매칭이 누락된 케이스여도 전환 자체는 실제 발생한 것)
+      return Object.values(map).filter(function(v) {
+        return v.spend > 0 || v.firstPurch > 0 || v.orderComp > 0;
+      });
     }
 
     dataUA = sortArr(aggregate('UA'), sortUA);
@@ -1462,7 +1489,7 @@
     return '$' + n.toFixed(0);
   }
   function formatCPA(spend, fp) {
-    if (!fp) return '-';
+    if (!fp || !spend) return '-';  // spend 미매칭 건이 $0.00(최고 효율)로 보이지 않도록
     return '$' + (spend/fp).toFixed(2);
   }
   function formatROAS(spend, oc) {

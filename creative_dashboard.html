@@ -146,6 +146,7 @@
   .type-tag { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; flex-shrink: 0; }
   .tag-carousel { background: #dbeafe; color: #1d4ed8; }
   .tag-video { background: #ede9fe; color: #6d28d9; }
+  .tag-tiktok { background: #cffafe; color: #0e7490; }
   .cr-meta { display: flex; flex-direction: column; gap: 4px; }
   .cr-meta-row { font-size: 12px; color: var(--text-muted); }
   .cr-metric { font-weight: 700; font-size: 14px; }
@@ -280,6 +281,7 @@
       <option value="all" style="color:#6b7280;font-weight:400">전체</option>
       <option value="Carousel" selected>Carousel</option>
       <option value="Video">Video</option>
+      <option value="TikTok One">TikTok One</option>
     </select>
   </div>
   <div class="filter-divider"></div>
@@ -621,7 +623,7 @@
       const hasCh = !!L.ch;
       return payload.rows.map(r => {
         const cr = L.cr[r[3]] || '';
-        const ctype = L.ty ? (L.ty[r[4]] || '') : '';
+        const ctype = refineCreativeType(cr, L.ty ? (L.ty[r[4]] || '') : '');
         return {
           date:         L.d [r[0]] || '',
           campaign:     L.ca[r[1]] || '',
@@ -641,7 +643,7 @@
     return payload.rows.map(r => {
       const cr = String(r.cr || r.creative || '');
       const ctype = r.ty || r.creativeType || '';
-      const ctype2 = r.ty || r.creativeType || '';
+      const ctype2 = refineCreativeType(cr, r.ty || r.creativeType || '');
       return {
         date:         r.d  || r.date         || '',
         campaign:     r.ca || r.campaign     || '',
@@ -728,6 +730,14 @@
     return '';
   }
 
+  // ─── TikTok One(브랜드 미션/크리에이터 UGC) 소재 타입 보정 ──────────
+  // 소재명에 video/carousel 키워드가 없어 기존 로직이 전부 Carousel로 떨어뜨리던 문제 해결.
+  // data.js(자동 로드)와 xlsx(수동 업로드) 양쪽 경로에서 공통으로 사용한다.
+  function refineCreativeType(creative, ctype) {
+    if (/tiktok\s*one/i.test(String(creative || ''))) return 'TikTok One';
+    return ctype;
+  }
+
   function mapCreativeType(유형, creative) {
     const t = String(유형 || '').toLowerCase();
     if (t.includes('video') || t.includes('nativevideo')) return 'Video';
@@ -755,7 +765,7 @@
           campaign:     String(r['Campaign'] || '').trim(),
           campType:     String(r['Campaign Goal']).trim(),
           creative:     creative,
-          creativeType: mapCreativeType(r['유형'], creative),
+          creativeType: refineCreativeType(creative, mapCreativeType(r['유형'], creative)),
           prodDate:     extractProdDate(creative),
           spend:        parseFloat(String(r['Cost (Channel)'] || '0').replace(/[^0-9.]/g,'')) || 0,
           firstPurch:   parseInt(String(r['first_purchase Users (App)'] || '0').replace(/[^0-9]/g,'')) || 0,
@@ -803,7 +813,7 @@
         campaign:     String(findCol(row, COL_MAP.campaign)).trim(),
         campType:     String(findCol(row, COL_MAP.campType)).trim().toUpperCase().includes('RE') ? 'RE' : 'UA',
         creative:     String(findCol(row, COL_MAP.creative)).trim(),
-        creativeType: String(findCol(row, COL_MAP.creativeType)).trim(),
+        creativeType: refineCreativeType(String(findCol(row, COL_MAP.creative)).trim(), String(findCol(row, COL_MAP.creativeType)).trim()),
         prodDate:     toDateStr(findCol(row, COL_MAP.prodDate)),
         spend:        parseFloat(String(findCol(row, COL_MAP.spend)).replace(/[^0-9.]/g,'')) || 0,
         firstPurch:   parseInt(String(findCol(row, COL_MAP.firstPurch)).replace(/[^0-9]/g,'')) || 0,
@@ -1195,7 +1205,13 @@
       }
     });
     function makeRows(map, valKey, cls, fmt, limit) {
-      var sorted = Object.entries(map).sort(function(a,b) { return b[1][valKey] - a[1][valKey]; }).slice(0, limit);
+      // 소재 랭킹과 동일 기준: spend와 전환(FP/OC)이 모두 0인 작품은 제외
+      var entries = Object.entries(map).filter(function(kv) {
+        var v = kv[1];
+        var conv = (v.fp || 0) + (v.oc || 0);
+        return v.spend > 0 || conv > 0;
+      });
+      var sorted = entries.sort(function(a,b) { return b[1][valKey] - a[1][valKey]; }).slice(0, limit);
       if (!sorted.length) return '<tr><td colspan="3" style="padding:20px;text-align:center;color:var(--text-muted)">No data</td></tr>';
       return sorted.map(function(kv, i) {
         return '<tr><td class="title-num">'+(i+1)+'</td><td class="title-name" title="'+escHtml(kv[0])+'">'+escHtml(kv[0])+'</td><td class="title-val '+cls+'">'+fmt(kv[1][valKey])+'</td></tr>';
@@ -1389,7 +1405,7 @@
   // ─── renderPanel ────────────────────────────────────────────────────────
   function makeCreativeCard(row, rank, tab) {
     var isVideo = row.creativeType === 'Video';
-    var typeTagClass = isVideo ? 'tag-video' : 'tag-carousel';
+    var typeTagClass = row.creativeType === 'TikTok One' ? 'tag-tiktok' : isVideo ? 'tag-video' : 'tag-carousel';
     var rankClass = rank <= 3 ? ' cr-rank-'+rank : '';
     var effStatus = getEffectiveStatus(row);
     var statusCls = effStatus === 'OFF' ? 'cr-status-off' : effStatus === 'Pause' ? 'cr-status-pause' : 'cr-status-live';
@@ -1422,7 +1438,7 @@
       var rank = i + 1;
       var rankCls = rank <= 3 ? ' rt-rank-'+rank : '';
       var isVideo = row.creativeType === 'Video';
-      var typeTagClass = isVideo ? 'tag-video' : 'tag-carousel';
+      var typeTagClass = row.creativeType === 'TikTok One' ? 'tag-tiktok' : isVideo ? 'tag-video' : 'tag-carousel';
       var effStatus = getEffectiveStatus(row);
       var statusCls = effStatus === 'OFF' ? 'cr-status-off' : effStatus === 'Pause' ? 'cr-status-pause' : 'cr-status-live';
       var metric = isUA ? row.firstPurch : row.orderComp;
@@ -1467,12 +1483,15 @@
     var totalSpend  = data.reduce(function(s,r) { return s+r.spend; }, 0);
     var nC = data.filter(function(r) { return r.creativeType==='Carousel'; }).length;
     var nV = data.filter(function(r) { return r.creativeType==='Video'; }).length;
+    var nT = data.filter(function(r) { return r.creativeType==='TikTok One'; }).length;
     var prefix = tab.toLowerCase();
 
     document.getElementById(prefix+'-stat1').textContent = totalMetric.toLocaleString();
     document.getElementById(prefix+'-stat2').textContent = formatSpend(totalSpend);
     document.getElementById(prefix+'-stat3').textContent = data.length.toLocaleString();
-    document.getElementById(prefix+'-stat4').textContent = nC + ' / ' + nV;
+    document.getElementById(prefix+'-stat4').textContent = nC + ' / ' + nV + (nT ? ' / ' + nT : '');
+    var s4sub = document.getElementById(prefix+'-stat4-sub');
+    if (s4sub) s4sub.textContent = nT ? 'Carousel / Video / TikTok One' : 'Carousel / Video';
 
     var top3 = data.slice(0, 3);
     document.getElementById('crGrid'+tab).innerHTML = top3.map(function(r,i) { return makeCreativeCard(r,i+1,tab); }).join('');

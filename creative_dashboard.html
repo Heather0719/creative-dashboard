@@ -146,7 +146,9 @@
   .type-tag { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; flex-shrink: 0; }
   .tag-carousel { background: #dbeafe; color: #1d4ed8; }
   .tag-video { background: #ede9fe; color: #6d28d9; }
-  .tag-tiktok { background: #cffafe; color: #0e7490; }
+  .tag-dynamic { background: #fef3c7; color: #b45309; }
+  .tag-image { background: #dcfce7; color: #15803d; }
+  .tag-etc { background: #f3f4f6; color: #6b7280; }
   .cr-meta { display: flex; flex-direction: column; gap: 4px; }
   .cr-meta-row { font-size: 12px; color: var(--text-muted); }
   .cr-metric { font-weight: 700; font-size: 14px; }
@@ -281,7 +283,9 @@
       <option value="all" style="color:#6b7280;font-weight:400" selected>전체</option>
       <option value="Carousel">Carousel</option>
       <option value="Video">Video</option>
-      <option value="TikTok One">TikTok One</option>
+      <option value="Dynamic">Dynamic</option>
+      <option value="Image">Image</option>
+      <option value="etc">etc</option>
     </select>
   </div>
   <div class="filter-divider"></div>
@@ -348,7 +352,7 @@
         <div class="stat-sub" id="ua-stat3-sub">개</div>
       </div>
       <div class="stat-card gray">
-        <div class="stat-label">Carousel / Video</div>
+        <div class="stat-label">소재 유형별</div>
         <div class="stat-value" id="ua-stat4">-</div>
         <div class="stat-sub" id="ua-stat4-sub">Type별</div>
       </div>
@@ -395,7 +399,7 @@
         <div class="stat-sub" id="re-stat3-sub">개</div>
       </div>
       <div class="stat-card gray">
-        <div class="stat-label">Carousel / Video</div>
+        <div class="stat-label">소재 유형별</div>
         <div class="stat-value" id="re-stat4">-</div>
         <div class="stat-sub" id="re-stat4-sub">Type별</div>
       </div>
@@ -730,12 +734,25 @@
     return '';
   }
 
-  // ─── TikTok One(브랜드 미션/크리에이터 UGC) 소재 타입 보정 ──────────
-  // 소재명에 video/carousel 키워드가 없어 기존 로직이 전부 Carousel로 떨어뜨리던 문제 해결.
-  // data.js(자동 로드)와 xlsx(수동 업로드) 양쪽 경로에서 공통으로 사용한다.
+  // ─── 소재 유형 분류: Carousel / Video / Dynamic / Image / etc ─────────
+  // 소재명 키워드 우선 → 원본 '유형' 컬럼(Video) 보조. data.js·xlsx 양쪽 경로 공통.
+  // 우선순위: Dynamic > Carousel > Image > Video > 배너사이즈(Image) > etc
+  var BANNER_RE = /(^|[^0-9])(320x50|300x50|300x250|320x480|480x320|1200x627|1200x600|468x60|414x65|768x1024|1024x768|375x667|728x90)([^0-9]|$)/i;
   function refineCreativeType(creative, ctype) {
-    if (/tiktok\s*one/i.test(String(creative || ''))) return 'TikTok One';
-    return ctype;
+    var c = String(creative || '').toLowerCase().trim();
+    var t = String(ctype || '').toLowerCase();
+    if (!c || c === 'nan') return 'etc';
+    if (/dynamic|catalog|(^|_)dco(_|$)/.test(c)) return 'Dynamic';
+    if (/carousel|(^|_)slide(_|$)/.test(c)) return 'Carousel';
+    if (/metavideo/.test(c)) return 'Video';
+    if (/(^|[_ ])(image|img|single-?image)([_ ]|$)|single-?image/.test(c)) return 'Image';
+    if (/video|\.mp4|trailer|tiktok\s*one|ttcc/.test(c)) return 'Video';
+    if (/\.(png|jpe?g|gif|webp)$/.test(c) || BANNER_RE.test(c)) return 'Image';
+    if (t.includes('video')) return 'Video';
+    return 'etc';
+  }
+  function typeTagClassOf(ty) {
+    return { Carousel:'tag-carousel', Video:'tag-video', Dynamic:'tag-dynamic', Image:'tag-image' }[ty] || 'tag-etc';
   }
 
   function mapCreativeType(유형, creative) {
@@ -1003,7 +1020,7 @@
       rawData.forEach(r => {
         if (r.campType !== campType) return;
         if (!inDateRange(r.date)) return;
-        if (ctype !== 'all' && !r.creativeType.toLowerCase().includes(ctype.toLowerCase())) return;
+        if (ctype !== 'all' && r.creativeType !== ctype) return;
         if (prodFrom && r.prodDate && r.prodDate < prodFrom) return;
         if (prodTo && r.prodDate && r.prodDate > prodTo) return;
         if (selCh && !selCh.has(r.channel)) return;
@@ -1194,7 +1211,7 @@
     rawData.forEach(function(r) {
       if (!inRange(r.date)) return;
       if (selCh && !selCh.has(r.channel)) return;
-      if (ctype !== 'all' && !(r.creativeType || '').toLowerCase().includes(ctype.toLowerCase())) return;
+      if (ctype !== 'all' && (r.creativeType || '') !== ctype) return;
       var title = extractTitle(r.creative || r.campaign);
       if (r.campType === 'UA') {
         if (!uaMap[title]) uaMap[title] = { spend: 0, fp: 0 };
@@ -1404,8 +1421,7 @@
 
   // ─── renderPanel ────────────────────────────────────────────────────────
   function makeCreativeCard(row, rank, tab) {
-    var isVideo = row.creativeType === 'Video';
-    var typeTagClass = row.creativeType === 'TikTok One' ? 'tag-tiktok' : isVideo ? 'tag-video' : 'tag-carousel';
+    var typeTagClass = typeTagClassOf(row.creativeType);
     var rankClass = rank <= 3 ? ' cr-rank-'+rank : '';
     var effStatus = getEffectiveStatus(row);
     var statusCls = effStatus === 'OFF' ? 'cr-status-off' : effStatus === 'Pause' ? 'cr-status-pause' : 'cr-status-live';
@@ -1437,8 +1453,7 @@
     var rows = data.map(function(row, i) {
       var rank = i + 1;
       var rankCls = rank <= 3 ? ' rt-rank-'+rank : '';
-      var isVideo = row.creativeType === 'Video';
-      var typeTagClass = row.creativeType === 'TikTok One' ? 'tag-tiktok' : isVideo ? 'tag-video' : 'tag-carousel';
+      var typeTagClass = typeTagClassOf(row.creativeType);
       var effStatus = getEffectiveStatus(row);
       var statusCls = effStatus === 'OFF' ? 'cr-status-off' : effStatus === 'Pause' ? 'cr-status-pause' : 'cr-status-live';
       var metric = isUA ? row.firstPurch : row.orderComp;
@@ -1481,17 +1496,16 @@
 
     var totalMetric = data.reduce(function(s,r) { return s+(tab==='UA'?r.firstPurch:r.orderComp); }, 0);
     var totalSpend  = data.reduce(function(s,r) { return s+r.spend; }, 0);
-    var nC = data.filter(function(r) { return r.creativeType==='Carousel'; }).length;
-    var nV = data.filter(function(r) { return r.creativeType==='Video'; }).length;
-    var nT = data.filter(function(r) { return r.creativeType==='TikTok One'; }).length;
+    var TYPES = ['Carousel','Video','Dynamic','Image','etc'];
+    var typeCnt = TYPES.map(function(ty) { return data.filter(function(r) { return r.creativeType===ty; }).length; });
     var prefix = tab.toLowerCase();
 
     document.getElementById(prefix+'-stat1').textContent = totalMetric.toLocaleString();
     document.getElementById(prefix+'-stat2').textContent = formatSpend(totalSpend);
     document.getElementById(prefix+'-stat3').textContent = data.length.toLocaleString();
-    document.getElementById(prefix+'-stat4').textContent = nC + ' / ' + nV + (nT ? ' / ' + nT : '');
+    document.getElementById(prefix+'-stat4').textContent = typeCnt.join(' / ');
     var s4sub = document.getElementById(prefix+'-stat4-sub');
-    if (s4sub) s4sub.textContent = nT ? 'Carousel / Video / TikTok One' : 'Carousel / Video';
+    if (s4sub) s4sub.textContent = 'Carousel / Video / Dynamic / Image / etc';
 
     var top3 = data.slice(0, 3);
     document.getElementById('crGrid'+tab).innerHTML = top3.map(function(r,i) { return makeCreativeCard(r,i+1,tab); }).join('');
